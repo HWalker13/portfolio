@@ -1,0 +1,44 @@
+---
+/* Vercel serves dist/404.html for any missing path on a static deploy. */
+import Base from '../layouts/Base.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Track not found" description="This page doesn't exist.">
+  <section class="rug rug--slim" aria-label="Site">
+    <div class="container">
+      <a class="rug-link home" href="/">Holden Anderson</a>
+    </div>
+  </section>
+  <div class="sleeve container">
+    <div class="sleeve-inner lost">
+      <p class="code">404</p>
+      <h1>This track isn't on the record.</h1>
+      <p>The page you're looking for doesn't exist. <a href="/#tracklist-title">The tracklist</a> has everything that does.</p>
+    </div>
+  </div>
+  <Footer slot="footer" />
+</Base>
+
+<style>
+  .home {
+    display: inline-block;
+    padding-block: 0.5rem;
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: var(--step-1);
+    text-decoration: none;
+  }
+  .lost {
+    min-height: 40vh;
+  }
+  .code {
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+  }
+  h1 {
+    margin-block: var(--space-2) var(--space-3);
+    font-size: var(--step-3);
+  }
+</style>

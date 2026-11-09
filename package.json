@@ -8,7 +8,9 @@
     "test": "vitest run",
     "contrast": "node scripts/contrast.mjs --strict",
     "astro": "astro",
-    "rug": "node scripts/make-rug.mjs"
+    "rug": "node scripts/make-rug.mjs",
+    "icons": "node scripts/make-icons.mjs",
+    "og": "node scripts/make-og.mjs"
   },
   "type": "module",
   "dependencies": {
@@ -19,6 +21,7 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
+    "puppeteer-core": "^25.16.0",
     "sharp": "^0.35.5",
     "typescript": "^6.0.3",
     "vitest": "^4.1.12"

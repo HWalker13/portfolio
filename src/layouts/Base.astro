@@ -15,11 +15,27 @@ import { site } from '../data/site';
 interface Props {
   title?: string;
   description?: string;
+  /** 'article' for liner-notes pages, 'website' for the home page. */
+  ogType?: 'website' | 'article';
+  /** Adds a schema.org Person block. Only the home page needs it. */
+  person?: boolean;
 }
 
-const { title, description = site.description } = Astro.props;
+const { title, description = site.description, ogType = 'website', person = false } = Astro.props;
 const pageTitle = title ? `${title} · ${site.name}` : `${site.name}: backend & AI engineer`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
+// Social previews need absolute URLs.
+const ogImage = new URL('/og.jpg', Astro.site);
+
+const personLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: site.name,
+  url: new URL('/', Astro.site).href,
+  jobTitle: 'Backend & AI engineer',
+  alumniOf: { '@type': 'CollegeOrUniversity', name: 'California State University, San Bernardino' },
+  sameAs: [site.links.github, site.links.linkedin],
+};
 ---
 
 <!doctype html>
@@ -30,9 +46,33 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
+
+    <!-- Icons: a tiny record. SVG for modern browsers, .ico and Apple touch icon as fallbacks. -->
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+
     <!-- Browser chrome matches the top of the rug -->
     <meta name="theme-color" content="#1f3016" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#111a0c" media="(prefers-color-scheme: dark)" />
+
+    <!-- Social previews (LinkedIn, Slack, iMessage, X) -->
+    <meta property="og:type" content={ogType} />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content={`${site.name}: ${site.tagline}`} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
+
+    {person && <script type="application/ld+json" set:html={JSON.stringify(personLd)} />}
+
     <!-- The display face renders the name in the hero (the likely LCP element), so fetch it early. -->
     <link rel="preload" href={frauncesLatin} as="font" type="font/woff2" crossorigin />
     <slot name="head" />

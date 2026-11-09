@@ -29,7 +29,7 @@ const { title, subtitle, side, track, tagline, role, date, stack, proof } = entr
 const { Content } = await render(entry);
 ---
 
-<Base title={`${title}: liner notes`} description={tagline}>
+<Base title={`${title}: liner notes`} description={tagline} ogType="article">
   <section class="rug rug--slim" aria-label="Site">
     <div class="container toprow">
       <a class="rug-link home" href="/">Holden Anderson</a>
@@ -293,6 +293,12 @@ const { Content } = await render(entry);
   /* Diagrams: inline SVG, styled with tokens so they follow light/dark. */
   .prose :global(figure.diagram) {
     margin-block: var(--space-4);
+  }
+  /* On small phones, let diagrams use the sleeve's side padding so their labels stay ~11px. */
+  @media (max-width: 480px) {
+    .prose :global(figure.diagram) {
+      margin-inline: -1rem;
+    }
   }
   .prose :global(figure.diagram svg) {
     width: 100%;
