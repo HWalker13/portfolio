@@ -8,7 +8,6 @@ export const site = {
     github: 'https://github.com/HWalker13',
     linkedin: 'https://www.linkedin.com/in/holden-anderson123',
     resume: '/resume.pdf',
-    // TODO(Holden): email address. Left empty so nothing ships with a fake one.
-    email: '',
+    email: 'holdenwalkera@gmail.com',
   },
 } as const;

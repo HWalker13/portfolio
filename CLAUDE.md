@@ -103,7 +103,7 @@ This is the part that should feel like me. Build it as `src/components/Turntable
 These facts come from my resume and past work. **Use only these numbers and claims. Never invent metrics, users, ratings or features.** If you want a fact that isn't here, leave a `<!-- TODO(Holden): ... -->` comment instead of guessing.
 
 ### 1. Lovely, "Lovely: Relationship Growth" (iOS)
-- **Role:** Co-Founder & Founding Engineer, Lovely LLC, Nov 2025–present
+- **Role:** Co-Founder & Engineer, Lovely LLC, Nov 2025–present
 - **Proof:** App Store: https://apps.apple.com/us/app/lovely-relationship-growth/id6758863491 (the codebase is private, so there's no repo link)
 - **Stack:** FastAPI, React Native (Expo, New Architecture), Firebase/Firestore, RevenueCat, EAS Build
 - **What I built:**
@@ -111,10 +111,11 @@ These facts come from my resume and past work. **Use only these numbers and clai
   - Four layers of security on a multi-tenant user dataset: Fernet field-level encryption with per-user key derivation, Firestore-backed sliding-window rate limiting, and HMAC-verified RevenueCat webhooks with replay protection.
   - A 305-line Firestore security ruleset with default-deny access, per-user isolation, append-only messages, and payload size caps, tested with 30+ pytest files.
   - Fixed cold-start crashes under React Native's New Architecture via lazy Firebase initialization and deferred notification handlers. This unblocked stable distribution to 40+ beta users and the production App Store release.
+  - Built subscription billing and free trials with RevenueCat, gaining the app's first paying subscribers after launch.
 - **Hard part to emphasize:** keeping the app provider-agnostic, and handling users' private relationship data safely.
 
 ### 2. NFL Game Predictor
-- **Proof:** https://github.com/HWalker13/NFL-GAME-PREDICTOR (verify the exact repo URL with me)
+- **Proof:** https://github.com/HWalker13/NFL-GAME-PREDICTOR
 - **Stack:** Python, pandas, scikit-learn. Built as a spec-driven pipeline with Claude Code doing the implementation. Be honest about that in the copy; the judgment and the methodology are mine.
 - **Results:**
   - 64.3% accuracy on 544 held-out games vs. a 54.4% home-team baseline, using 67 point-in-time features including custom Elo and EPA.
@@ -145,7 +146,7 @@ These facts come from my resume and past work. **Use only these numbers and clai
 ### Links
 - GitHub: https://github.com/HWalker13
 - LinkedIn: https://www.linkedin.com/in/holden-anderson123
-- Email: `<!-- TODO(Holden): email -->`
+- Email: holdenwalkera@gmail.com
 - Resume: `/resume.pdf`. I'll drop the file into `public/`.
 
 ## Writing voice
