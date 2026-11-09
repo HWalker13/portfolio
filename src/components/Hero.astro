@@ -1,9 +1,7 @@
 ---
 /*
-  Hero: the turntable on a shag rug.
-  The rug is three static background layers (vignette/scrim gradient, a pre-generated tile, a base color),
-  so nothing behind the spinning record ever repaints.
-  The bottom edge is a bound rug edge with a fringe. The album sleeve (Tracklist) overlaps it.
+  Hero: the turntable on the shag rug. Rug styles live in src/styles/surfaces.css.
+  The album sleeve (Tracklist) overlaps the rug's bound edge.
 */
 import Turntable from './Turntable.astro';
 import { site } from '../data/site';
@@ -35,61 +33,6 @@ import { site } from '../data/site';
 </section>
 
 <style>
-  .rug {
-    /* Focus rings on the rug use mustard; chocolate would disappear on dark green. */
-    --focus: var(--focus-on-rug);
-
-    position: relative;
-    color: var(--on-rug);
-    background:
-      radial-gradient(
-        ellipse 120% 95% at 50% 38%,
-        rgb(var(--rug-scrim) / var(--rug-scrim-min)) 0%,
-        rgb(var(--rug-scrim) / var(--rug-scrim-min)) 40%,
-        rgb(var(--rug-scrim) / var(--rug-scrim-max)) 100%
-      ),
-      var(--rug-image) 0 0 / 256px 256px repeat,
-      var(--rug-base);
-    /* Bound edge of the rug */
-    border-bottom: 12px solid var(--rug-binding);
-    padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(7rem, 12vw, 9rem);
-  }
-
-  /* Stitching along the binding */
-  .rug::before {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    bottom: -7px;
-    height: 2px;
-    background: repeating-linear-gradient(
-      90deg,
-      rgb(243 230 204 / 0.35) 0 7px,
-      transparent 7px 13px
-    );
-  }
-
-  /* Fringe hanging off the edge onto the floor */
-  .rug::after {
-    content: '';
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: calc(100% + 12px);
-    height: 14px;
-    background: repeating-linear-gradient(
-      90deg,
-      var(--rug-fiber) 0 2px,
-      transparent 2px 4px,
-      var(--rug-binding) 4px 6px,
-      transparent 6px 8px
-    );
-    -webkit-mask-image: linear-gradient(#000 40%, transparent);
-    mask-image: linear-gradient(#000 40%, transparent);
-    pointer-events: none;
-  }
-
   .hero {
     display: grid;
     gap: var(--space-5);

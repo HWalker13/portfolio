@@ -23,7 +23,10 @@ const href = `/projects/${entry.id}/`;
       {
         headlineStats.map((s) => (
           <li>
-            <span class="value">{s.value}</span> <span class="context">{s.context}</span>
+            {s.lead && <span class="context">{s.lead} </span>}
+            <span class="value">{s.value}</span>
+            {/^[,.;:]/.test(s.context) ? '' : ' '}
+            <span class="context">{s.context}</span>
           </li>
         ))
       }

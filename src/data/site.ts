@@ -4,13 +4,13 @@ export const site = {
   tagline: 'Backend & AI engineer. I build things from scratch to understand them.',
   school: 'CS at CSU San Bernardino',
   graduation: 'Graduating May 2027',
-  lookingFor: 'Looking for new-grad 2027 and junior roles in backend, infrastructure and AI engineering.',
+  lookingFor: 'Looking for new-grad backend, infrastructure or AI engineering roles starting June 2027.',
   description:
     'Holden Anderson, CS student at CSU San Bernardino (May 2027). Backend, infrastructure and AI engineering, with the evidence linked.',
   links: {
     github: 'https://github.com/HWalker13',
     linkedin: 'https://www.linkedin.com/in/holden-anderson123',
-    resume: '/resume.pdf',
+    resume: '/Holden-Anderson-Resume.pdf',
     email: 'holdenwalkera@gmail.com',
   },
   stack: [

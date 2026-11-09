@@ -5,7 +5,7 @@ track: 3
 side: B
 # DRAFT: Holden to edit
 tagline: 'An LLM router that falls back across Groq, OpenAI and Anthropic, then the tracer I built after finding the router threw away its own retry data.'
-# TODO(Holden): project dates
+date: '2026'
 stack:
   - Python
   - Pydantic
@@ -14,10 +14,10 @@ stack:
   - JSONL
   - GitHub Actions
 headlineStats:
+  - value: '2'
+    context: 'packages published to PyPI'
   - value: '7.75µs'
-    context: 'tracing overhead per call, under 0.01% of real LLM latency'
-  - value: '89 + 73'
-    context: 'tests: a fully mocked swapLLM suite, plus swaptrace'
+    context: 'tracing overhead (<0.01% of LLM latency)'
 proof:
   - kind: pypi
     label: PyPI swapllm

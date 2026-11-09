@@ -4,7 +4,7 @@ track: 4
 side: B
 # DRAFT: Holden to edit
 tagline: 'A Redis-like cache on raw TCP sockets and the standard library, built to survive crashes and network partitions.'
-# TODO(Holden): project dates
+date: '2026'
 stack:
   - Python (standard library only)
   - Raw TCP sockets

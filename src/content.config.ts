@@ -23,7 +23,10 @@ const projects = defineCollection({
     headlineStats: z
       .array(
         z.object({
+          /** Optional words before the number, e.g. "Vegas hits" */
+          lead: z.string().optional(),
           value: z.string(),
+          /** Words after the number. Starts with punctuation to attach directly (", so …"). */
           context: z.string().min(10),
         }),
       )

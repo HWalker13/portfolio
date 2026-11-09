@@ -4,7 +4,7 @@ This file is the spec for this repo. Read all of it before writing code, and re-
 
 ## Why this site exists
 
-I'm Holden Anderson, a CS student at CSU San Bernardino, graduating May 2027. I'm applying to new-grad 2027 and junior roles in backend, infrastructure and AI engineering.
+I'm Holden Anderson, a CS student at CSU San Bernardino, graduating May 2027. I'm looking for new-grad backend, infrastructure or AI engineering roles starting June 2027.
 
 Every claim on my resume is self-reported, and recruiters have no way to check it in 8 seconds. **This site's job is to turn those claims into evidence a stranger can check in under a minute**: live App Store link, PyPI packages, public repos, real numbers with context.
 
@@ -115,6 +115,7 @@ These facts come from my resume and past work. **Use only these numbers and clai
 - **Hard part to emphasize:** keeping the app provider-agnostic, and handling users' private relationship data safely.
 
 ### 2. NFL Game Predictor
+- **Date:** 2026
 - **Proof:** https://github.com/HWalker13/NFL-GAME-PREDICTOR
 - **Stack:** Python, pandas, scikit-learn. Built as a spec-driven pipeline with Claude Code doing the implementation. Be honest about that in the copy; the judgment and the methodology are mine.
 - **Results:**
@@ -127,6 +128,7 @@ These facts come from my resume and past work. **Use only these numbers and clai
 - **Hard part to emphasize:** scientific honesty. I rejected a better-looking model, and I report that Vegas beats me. This is my best interview story, so make it the centerpiece of the page.
 
 ### 3. swapLLM + swaptrace (two PyPI packages, one story)
+- **Date:** 2026
 - **Proof:** https://pypi.org/project/swapllm · https://github.com/HWalker13/swapllm · https://pypi.org/project/swaptrace · https://github.com/HWalker13/swaptrace
 - **Stack:** Python, Pydantic, pytest, dataclasses, JSONL, GitHub Actions
 - **The story arc:** "I built a router, found a real gap in it, then reverse-engineered my own tool to fix it."
@@ -134,6 +136,7 @@ These facts come from my resume and past work. **Use only these numbers and clai
 - **swaptrace:** I found that swapLLM's fallback cascade threw away all per-attempt data when a call succeeded. So I reimplemented the retry loop with verified behavioral parity and full attempt-level tracing. Overhead is 7.75µs/call (under 0.01% of real LLM latency), measured with a GC-disabled methodology (5 trials × 1,000 iterations). It has 73 tests, zero runtime dependencies, and a CLI for comparing traces across providers.
 
 ### 4. Kache
+- **Date:** 2026
 - **Proof:** https://github.com/HWalker13/kache
 - **Stack:** Python (standard library only), raw TCP sockets, Docker Compose, AWS EC2
 - **What I built:** a Redis-like key-value cache from raw TCP sockets with zero dependencies. It has 6 protocol commands and a multi-threaded server, plus:
@@ -147,7 +150,7 @@ These facts come from my resume and past work. **Use only these numbers and clai
 - GitHub: https://github.com/HWalker13
 - LinkedIn: https://www.linkedin.com/in/holden-anderson123
 - Email: holdenwalkera@gmail.com
-- Resume: `/resume.pdf`. I'll drop the file into `public/`.
+- Resume: `/Holden-Anderson-Resume.pdf` (in `public/`).
 
 ## Writing voice
 
