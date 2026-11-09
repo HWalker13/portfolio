@@ -2,7 +2,7 @@
 import { defineConfig } from 'astro/config';
 
 export default defineConfig({
-  // TODO(Holden): swap for the real domain once Vercel is connected.
+  // Production URL (Vercel). Canonical, Open Graph and sitemap URLs are built from this.
   site: 'https://holden-anderson.vercel.app',
   output: 'static',
 });
