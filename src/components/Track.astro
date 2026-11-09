@@ -1,0 +1,123 @@
+---
+import type { CollectionEntry } from 'astro:content';
+import ProofLinks from './ProofLinks.astro';
+
+interface Props {
+  entry: CollectionEntry<'projects'>;
+}
+const { entry } = Astro.props;
+const { title, subtitle, track, tagline, headlineStats, proof } = entry.data;
+const href = `/projects/${entry.id}/`;
+---
+
+<li class="track">
+  <span class="num" aria-hidden="true">{track}</span>
+  <div class="body">
+    <h4>
+      <span class="visually-hidden">Track {track}: </span>
+      <a href={href}>{title}</a>
+      {subtitle && <span class="subtitle">{subtitle}</span>}
+    </h4>
+    <p class="tagline">{tagline}</p>
+    <ul class="stats">
+      {
+        headlineStats.map((s) => (
+          <li>
+            <span class="value">{s.value}</span> <span class="context">{s.context}</span>
+          </li>
+        ))
+      }
+    </ul>
+    <div class="links">
+      <ProofLinks project={title} proof={proof} />
+      <a class="notes" href={href}>Liner notes<span class="visually-hidden"> for {title}</span></a>
+    </div>
+  </div>
+</li>
+
+<style>
+  .track {
+    display: grid;
+    grid-template-columns: 2.4rem minmax(0, 1fr);
+    gap: var(--space-3);
+    padding-block: var(--space-4);
+    border-top: 1px solid var(--rule);
+  }
+  .track:first-child {
+    border-top: 0;
+    padding-top: var(--space-2);
+  }
+  .num {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: var(--step-3);
+    line-height: 1;
+    color: var(--link);
+    text-align: right;
+  }
+  h4 {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: var(--step-2);
+    line-height: 1.1;
+  }
+  h4 a {
+    color: var(--text);
+    text-decoration-color: var(--burnt-orange);
+    text-decoration-thickness: 0.1em;
+  }
+  h4 a:hover {
+    color: var(--link);
+  }
+  .subtitle {
+    display: block;
+    margin-top: 0.2rem;
+    font-family: var(--font-body);
+    font-size: var(--step--1);
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+  .tagline {
+    margin-top: var(--space-2);
+  }
+  .stats {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-3);
+    display: grid;
+    gap: var(--space-2);
+  }
+  .stats li {
+    max-width: var(--measure);
+    line-height: 1.4;
+  }
+  .value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1.05em;
+    font-variant-numeric: tabular-nums;
+    color: var(--text);
+    padding: 0.05em 0.35em;
+    border-radius: 6px;
+    background: color-mix(in srgb, var(--mustard) 28%, transparent);
+  }
+  .context {
+    color: var(--text-muted);
+  }
+  .links {
+    margin-top: var(--space-3);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 1.1rem;
+  }
+  .notes {
+    padding-block: 0.35rem;
+    font-size: var(--step--1);
+    font-weight: 600;
+    color: var(--text);
+    text-decoration-color: var(--burnt-orange);
+  }
+</style>

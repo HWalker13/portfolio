@@ -15,6 +15,15 @@
   --deep-brown: #1e140d;
 
   /*
+    Shag-rug greens. Decorative only, like mustard and avocado: never text on cream.
+    The rug itself is a pre-generated tile (scripts/make-rug.mjs), not a live filter.
+  */
+  --rug-base: #2f4a23;
+  --rug-fiber: #4e6b2e;
+  --rug-fiber-light: #7a8f3a;
+  --rug-binding: #1d2f16;
+
+  /*
     Burnt orange is only 2.97:1 on cream, below AA even for large text.
     So in light mode it's decorative only, and text/links use this darker ink (4.85:1).
   */
@@ -33,6 +42,24 @@
   --stripe-2: var(--mustard);
   --stripe-3: var(--walnut);
   --grain-opacity: 0.07;
+
+  /*
+    Rug (hero). Text sits on the tile under a dark scrim. The scrim is never lighter than
+    --rug-scrim-min anywhere, so contrast is checked against the tile's brightest pixel
+    under that minimum. Orange text fails on green at any shade (similar luminance),
+    so links on the rug are paper pills, and orange is only an accent there.
+  */
+  --rug-image: url('/textures/rug.webp');
+  --rug-scrim: 14 22 9;
+  --rug-scrim-min: 0.52;
+  --rug-scrim-max: 0.78;
+  --on-rug: var(--cream);
+  --on-rug-muted: #ddd0b0;
+  --focus-on-rug: var(--mustard);
+  --pill-bg: var(--paper);
+  --pill-text: var(--chocolate);
+  --pill-bg-hover: var(--mustard);
+  --pill-accent: var(--burnt-orange);
 
   /* Type */
   --font-display: 'Fraunces Variable', 'Cooper Black', Georgia, serif;
@@ -79,5 +106,13 @@
     --focus: var(--mustard);
     --stripe-3: #8a5a35;
     --grain-opacity: 0.05;
+
+    /* Darker, moodier rug: dark tile plus a heavier scrim. */
+    --rug-base: #1a2914;
+    --rug-binding: #0f190b;
+    --rug-image: url('/textures/rug-dark.webp');
+    --rug-scrim: 8 12 5;
+    --rug-scrim-min: 0.45;
+    --rug-scrim-max: 0.85;
   }
 }

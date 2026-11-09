@@ -1,24 +1,12 @@
 ---
-/*
-  M2: the turntable alone on the page, for hands-on testing.
-  M3 replaces this with the real home page.
-*/
 import Base from '../layouts/Base.astro';
-import Turntable from '../components/Turntable.astro';
+import Hero from '../components/Hero.astro';
+import Tracklist from '../components/Tracklist.astro';
+import Footer from '../components/Footer.astro';
 ---
 
-<Base title="Turntable test">
-  <div class="stage container">
-    <h1 class="visually-hidden">Turntable test</h1>
-    <Turntable />
-  </div>
+<Base>
+  <Hero />
+  <Tracklist />
+  <Footer slot="footer" />
 </Base>
-
-<style>
-  .stage {
-    min-height: 100vh;
-    display: grid;
-    place-items: center;
-    padding-block: var(--space-5);
-  }
-</style>

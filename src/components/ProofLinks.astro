@@ -1,0 +1,44 @@
+---
+/*
+  Proof links (App Store / PyPI / GitHub). The project name goes in a visually hidden prefix,
+  so a screen reader's link list says "Kache on GitHub", not four identical "GitHub" links.
+  The visible label is still part of the accessible name (WCAG 2.5.3, label in name).
+*/
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  project: string;
+  proof: CollectionEntry<'projects'>['data']['proof'];
+  class?: string;
+}
+const { project, proof, class: className } = Astro.props;
+---
+
+<ul class:list={['proof', className]}>
+  {
+    proof.map((p) => (
+      <li>
+        <a href={p.url}>
+          <span class="visually-hidden">{project}: </span>
+          {p.label}
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .proof {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.1rem;
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+  .proof a {
+    display: inline-block;
+    padding-block: 0.35rem; /* taller tap target without changing the look */
+  }
+</style>

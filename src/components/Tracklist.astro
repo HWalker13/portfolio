@@ -1,0 +1,118 @@
+---
+/*
+  The album sleeve: a paper surface lying across the rug's edge. It holds the tracklist
+  (Side A / Side B) and the credits (About), like the back of a record sleeve.
+*/
+import { getCollection } from 'astro:content';
+import Track from './Track.astro';
+import Stripes from './Stripes.astro';
+import About from './About.astro';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
+const sides = (['A', 'B'] as const).map((side) => ({
+  side,
+  tracks: projects.filter((p) => p.data.side === side),
+}));
+---
+
+<section class="sleeve container" aria-labelledby="tracklist-title">
+  <div class="sleeve-inner">
+    <div class="sleeve-head">
+      <h2 id="tracklist-title">Tracklist</h2>
+      <!-- DRAFT: Holden to edit -->
+      <p class="lede">Four projects. Each one links to something you can check yourself: an app, a package or a repo.</p>
+    </div>
+    <Stripes class="sleeve-stripes" />
+
+    <div class="sides">
+      {
+        sides.map(({ side, tracks }) => (
+          <section class="side" aria-labelledby={`side-${side}`}>
+            <h3 id={`side-${side}`}>
+              Side {side}
+            </h3>
+            <ol class="tracks" start={tracks[0]?.data.track}>
+              {tracks.map((entry) => (
+                <Track entry={entry} />
+              ))}
+            </ol>
+          </section>
+        ))
+      }
+    </div>
+
+    <Stripes class="sleeve-stripes" />
+    <About />
+  </div>
+</section>
+
+<style>
+  .sleeve {
+    position: relative;
+    z-index: 1;
+    /* Pull the sleeve up so it lies across the rug's bound edge. */
+    margin-top: clamp(-6.5rem, -10vw, -5rem);
+  }
+  .sleeve-inner {
+    position: relative;
+    padding: clamp(1.5rem, 4vw, 3.5rem);
+    background-color: var(--surface);
+    border-radius: 10px;
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.5) inset,
+      0 2px 3px rgb(20 14 8 / 0.18),
+      0 30px 60px -24px rgb(10 16 6 / 0.65);
+    overflow: hidden;
+  }
+
+  /*
+    Ring wear: the faint circle a record leaves pressed into its sleeve over the years.
+    Decorative and static, at 5% opacity so text contrast barely moves.
+  */
+  .sleeve-inner::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      circle at 78% 34%,
+      transparent 0 calc(min(42vw, 26rem) - 3px),
+      color-mix(in srgb, var(--text) 5%, transparent) calc(min(42vw, 26rem) - 2px) calc(min(42vw, 26rem) + 2px),
+      transparent calc(min(42vw, 26rem) + 3px)
+    );
+  }
+  .sleeve-inner > :global(*) {
+    position: relative;
+  }
+
+  .lede {
+    margin-top: var(--space-3);
+    color: var(--text-muted);
+  }
+  .sleeve :global(.sleeve-stripes) {
+    margin-block: var(--space-4) var(--space-5);
+  }
+
+  .sides {
+    display: grid;
+    gap: var(--space-5);
+  }
+  @media (min-width: 960px) {
+    .sides {
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-6);
+    }
+  }
+  h3 {
+    font-size: var(--step-1);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding-bottom: var(--space-2);
+    border-bottom: 3px solid var(--text);
+  }
+  .tracks {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-2);
+  }
+</style>

@@ -30,8 +30,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonical} />
-    <meta name="theme-color" content="#F3E6CC" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#1E140D" media="(prefers-color-scheme: dark)" />
+    <!-- Browser chrome matches the top of the rug -->
+    <meta name="theme-color" content="#1f3016" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#111a0c" media="(prefers-color-scheme: dark)" />
     <!-- The display face renders the name in the hero (the likely LCP element), so fetch it early. -->
     <link rel="preload" href={frauncesLatin} as="font" type="font/woff2" crossorigin />
     <slot name="head" />
@@ -41,5 +42,6 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <main id="main">
       <slot />
     </main>
+    <slot name="footer" />
   </body>
 </html>

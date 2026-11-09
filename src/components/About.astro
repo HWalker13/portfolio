@@ -1,0 +1,55 @@
+---
+/* About, styled as the credits block on the back of the sleeve. */
+import { site } from '../data/site';
+---
+
+<section class="about" aria-labelledby="about-title">
+  <h2 id="about-title">About</h2>
+  <div class="cols">
+    <div class="prose">
+      <!-- DRAFT: Holden to edit -->
+      <p>
+        I'm a CS student at CSU San Bernardino, graduating in May 2027. I like building the layer underneath:
+        a cache from raw sockets, an LLM router, then the tool to see inside the router. I co-founded Lovely, which
+        is live on the App Store, and built its AI gateway and security layer. When a result looks too good, I'd
+        rather find out why than ship it.
+      </p>
+    </div>
+    <dl class="credits">
+      <dt>Stack I actually use</dt>
+      <dd>{site.stack.join(' · ')}</dd>
+    </dl>
+  </div>
+</section>
+
+<style>
+  .cols {
+    margin-top: var(--space-4);
+    display: grid;
+    gap: var(--space-4);
+  }
+  @media (min-width: 960px) {
+    .cols {
+      grid-template-columns: 1.3fr 1fr;
+      gap: var(--space-6);
+    }
+  }
+  .credits {
+    padding: var(--space-4);
+    border: 2px solid var(--text);
+    border-radius: var(--radius);
+    align-self: start;
+  }
+  dt {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  dd {
+    margin: var(--space-2) 0 0;
+    font-weight: 600;
+    line-height: 1.7;
+  }
+</style>
