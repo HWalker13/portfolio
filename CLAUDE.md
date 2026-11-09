@@ -108,7 +108,7 @@ These facts come from my resume and past work. **Use only these numbers and clai
 - **Stack:** FastAPI, React Native (Expo, New Architecture), Firebase/Firestore, RevenueCat, EAS Build
 - **What I built:**
   - A provider-agnostic AI gateway in FastAPI that routes across GPT-4o-mini and Claude 3 Sonnet, with prompt orchestration and cross-session memory injection, so the app isn't locked into one LLM provider.
-  - Four layers of security on a multi-tenant user dataset: Fernet field-level encryption with per-user key derivation, Firestore-backed sliding-window rate limiting, and HMAC-verified RevenueCat webhooks with replay protection.
+  - Protected user data with per-user encryption, rate limiting, and signed webhook verification (matches the resume; don't say "four layers"): Fernet field-level encryption with per-user key derivation, Firestore-backed sliding-window rate limiting, and HMAC-verified RevenueCat webhooks with replay protection.
   - A 305-line Firestore security ruleset with default-deny access, per-user isolation, append-only messages, and payload size caps, tested with 30+ pytest files.
   - Fixed cold-start crashes under React Native's New Architecture via lazy Firebase initialization and deferred notification handlers. This unblocked stable distribution to 40+ beta users and the production App Store release.
   - Built subscription billing and free trials with RevenueCat, gaining the app's first paying subscribers after launch.
@@ -145,6 +145,11 @@ These facts come from my resume and past work. **Use only these numbers and clai
   - Primary/replica replication with an in-memory write queue that buffers commands during a disconnect and replays them in order on reconnect (at-least-once delivery).
 - **Results:** 17,000+ ops/sec at sub-2ms p50 latency with 20 concurrent clients. After a simulated network partition, full replica sync recovered in under 2 seconds with zero writes lost across 50 buffered commands.
 - **Hard part to emphasize:** correctness under failure, meaning crash recovery and partitions.
+
+### Experience (credits block only, no track or liner notes)
+Listed exactly as on the resume, one line each:
+- Co-Founder & Engineer, Lovely LLC, Nov 2025–Present
+- Lead Engineer, Patch (P2P payments), Apr 2026–Sept 2026
 
 ### Links
 - GitHub: https://github.com/HWalker13

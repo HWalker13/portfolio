@@ -13,6 +13,11 @@ export const site = {
     resume: '/Holden-Anderson-Resume.pdf',
     email: 'holdenwalkera@gmail.com',
   },
+  /** Exactly as on the resume. Credits only: Patch has no track or liner-notes page. */
+  experience: [
+    { role: 'Co-Founder & Engineer', rest: 'Lovely LLC, Nov 2025–Present' },
+    { role: 'Lead Engineer', rest: 'Patch (P2P payments), Apr 2026–Sept 2026' },
+  ],
   stack: [
     'Python',
     'FastAPI',

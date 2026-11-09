@@ -62,7 +62,7 @@ Lovely: Relationship Growth is an iOS app with AI features built on what people 
 
 <!-- DRAFT: Holden to edit -->
 - **A provider-agnostic AI gateway** in FastAPI. It routes across GPT-4o-mini and Claude 3 Sonnet, handles prompt orchestration, and injects memory from earlier sessions.
-- **Four layers of security** on a multi-tenant dataset, including Fernet field-level encryption with per-user key derivation, Firestore-backed sliding-window rate limiting, and HMAC-verified RevenueCat webhooks with replay protection.
+- **Per-user encryption, rate limiting and signed webhook verification** to protect user data: Fernet field-level encryption with per-user key derivation, Firestore-backed sliding-window rate limiting, and HMAC-verified RevenueCat webhooks with replay protection.
 - **A 305-line Firestore ruleset**: default-deny, per-user isolation, append-only messages and payload size caps, tested with 30+ pytest files.
 - **Subscription billing and free trials** with RevenueCat.
 - **A fix for cold-start crashes** under React Native's New Architecture: lazy Firebase initialization and deferred notification handlers.
