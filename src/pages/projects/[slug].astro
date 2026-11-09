@@ -1,0 +1,357 @@
+---
+/*
+  Liner notes: one page per project, same template for all four.
+  Header facts come from frontmatter; the five sections come from the Markdown body.
+*/
+import type { GetStaticPaths } from 'astro';
+import { getCollection, render, type CollectionEntry } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import Footer from '../../components/Footer.astro';
+import ProofLinks from '../../components/ProofLinks.astro';
+import Stripes from '../../components/Stripes.astro';
+
+export const getStaticPaths = (async () => {
+  const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
+  return projects.map((entry, i) => ({
+    params: { slug: entry.id },
+    props: { entry, prev: projects[i - 1], next: projects[i + 1] },
+  }));
+}) satisfies GetStaticPaths;
+
+interface Props {
+  entry: CollectionEntry<'projects'>;
+  prev?: CollectionEntry<'projects'>;
+  next?: CollectionEntry<'projects'>;
+}
+
+const { entry, prev, next } = Astro.props;
+const { title, subtitle, side, track, tagline, role, date, stack, proof } = entry.data;
+const { Content } = await render(entry);
+---
+
+<Base title={`${title}: liner notes`} description={tagline}>
+  <section class="rug rug--slim" aria-label="Site">
+    <div class="container toprow">
+      <a class="rug-link home" href="/">Holden Anderson</a>
+      <a class="rug-link" href="/#tracklist-title">Back to the tracklist</a>
+    </div>
+  </section>
+
+  <article class="sleeve container">
+    <div class="sleeve-inner">
+      <header class="notes-head">
+        <p class="eyebrow">Side {side} · Track {track} · Liner notes</p>
+        <h1>{title}</h1>
+        {subtitle && <p class="subtitle">{subtitle}</p>}
+        <p class="tagline">{tagline}</p>
+
+        <dl class="meta">
+          {
+            role && (
+              <div>
+                <dt>Role</dt>
+                <dd>{role}</dd>
+              </div>
+            )
+          }
+          {
+            date && (
+              <div>
+                <dt>When</dt>
+                <dd>{date}</dd>
+              </div>
+            )
+          }
+          <div class="meta-stack">
+            <dt>Stack</dt>
+            <dd>{stack.join(' · ')}</dd>
+          </div>
+          <div class="meta-proof">
+            <dt>Proof</dt>
+            <dd><ProofLinks project={title} proof={proof} /></dd>
+          </div>
+        </dl>
+      </header>
+
+      <Stripes />
+
+      <div class="prose">
+        <Content />
+      </div>
+
+      <nav class="tracknav" aria-label="Other tracks">
+        {
+          prev ? (
+            <a href={`/projects/${prev.id}/`} class="prev">
+              <span class="dir">Previous track</span>
+              <span class="name">{prev.data.track}. {prev.data.title}</span>
+            </a>
+          ) : (
+            <span />
+          )
+        }
+        {
+          next ? (
+            <a href={`/projects/${next.id}/`} class="next">
+              <span class="dir">Next track</span>
+              <span class="name">{next.data.track}. {next.data.title}</span>
+            </a>
+          ) : (
+            <a href="/#tracklist-title" class="next">
+              <span class="dir">End of Side B</span>
+              <span class="name">Back to the tracklist</span>
+            </a>
+          )
+        }
+      </nav>
+    </div>
+  </article>
+
+  <Footer slot="footer" />
+</Base>
+
+<style>
+  .toprow {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+  }
+  .toprow a {
+    display: inline-block;
+    padding-block: 0.5rem;
+    font-weight: 600;
+  }
+  .home {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: var(--step-1);
+    text-decoration: none;
+  }
+
+  .notes-head {
+    max-width: 52rem;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  h1 {
+    margin-top: var(--space-2);
+    font-size: clamp(2.3rem, 1.6rem + 3.2vw, 4rem);
+  }
+  .subtitle {
+    margin-top: var(--space-2);
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+  .tagline {
+    margin-top: var(--space-3);
+    font-size: var(--step-1);
+    line-height: 1.45;
+  }
+
+  .meta {
+    margin-top: var(--space-4);
+    display: grid;
+    gap: var(--space-3) var(--space-5);
+  }
+  @media (min-width: 720px) {
+    .meta {
+      grid-template-columns: auto 1fr;
+    }
+    .meta-stack,
+    .meta-proof {
+      grid-column: 1 / -1;
+    }
+  }
+  .meta dt {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+  }
+  .meta dd {
+    margin: 0.15rem 0 0;
+    font-weight: 600;
+  }
+
+  .tracknav {
+    margin-top: var(--space-6);
+    padding-top: var(--space-4);
+    border-top: 3px solid var(--text);
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+  .tracknav a {
+    display: grid;
+    gap: 0.15rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .tracknav .next {
+    text-align: right;
+    margin-left: auto;
+  }
+  .dir {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .name {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: var(--step-1);
+    text-decoration: underline;
+    text-decoration-color: var(--burnt-orange);
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.18em;
+  }
+  .tracknav a:hover .name {
+    color: var(--link);
+  }
+
+  /* ── Liner-note prose (rendered Markdown, so :global) ───────────────── */
+  .prose {
+    max-width: 44rem;
+  }
+  .prose :global(h2) {
+    margin-top: var(--space-5);
+    margin-bottom: var(--space-3);
+    font-size: var(--step-2);
+  }
+  .prose :global(h2:first-child) {
+    margin-top: 0;
+  }
+  .prose :global(p),
+  .prose :global(ul),
+  .prose :global(ol),
+  .prose :global(table),
+  .prose :global(figure) {
+    margin-bottom: var(--space-3);
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    padding-left: 1.25rem;
+  }
+  .prose :global(li) {
+    margin-bottom: var(--space-2);
+  }
+  .prose :global(li::marker) {
+    color: var(--link);
+  }
+  .prose :global(strong) {
+    font-weight: 700;
+  }
+  .prose :global(code) {
+    padding: 0.05em 0.3em;
+    border-radius: 5px;
+    background: color-mix(in srgb, var(--text) 8%, transparent);
+  }
+  /* The "hard part" gets a highlighted margin rule: it's the section that matters most. */
+  .prose :global(.hard-part) {
+    margin-block: var(--space-4);
+    padding-left: var(--space-4);
+    border-left: 6px solid var(--burnt-orange);
+  }
+
+  .prose :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+  }
+  .prose :global(th),
+  .prose :global(td) {
+    padding: 0.5rem 0.6rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .prose :global(th) {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  .prose :global(td:not(:first-child)) {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+  /* Keep the model's number on one line; let the comparison text wrap on phones. */
+  .prose :global(td:nth-child(2)) {
+    white-space: nowrap;
+  }
+
+  /* Diagrams: inline SVG, styled with tokens so they follow light/dark. */
+  .prose :global(figure.diagram) {
+    margin-block: var(--space-4);
+  }
+  .prose :global(figure.diagram svg) {
+    width: 100%;
+    max-width: 26rem;
+    height: auto;
+    margin-inline: auto;
+    overflow: visible;
+  }
+  .prose :global(figcaption) {
+    margin-top: var(--space-2);
+    text-align: center;
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .prose :global(.d-box) {
+    fill: var(--bg);
+    stroke: var(--text);
+    stroke-width: 1.5;
+  }
+  .prose :global(.d-hi) {
+    fill: color-mix(in srgb, var(--mustard) 28%, var(--surface));
+    stroke: var(--text);
+    stroke-width: 2;
+  }
+  .prose :global(.d-line) {
+    fill: none;
+    stroke: var(--text);
+    stroke-width: 1.5;
+  }
+  .prose :global(.d-break) {
+    fill: none;
+    stroke: var(--link);
+    stroke-width: 2;
+    stroke-dasharray: 5 5;
+  }
+  .prose :global(.d-arrow) {
+    fill: var(--text);
+  }
+  .prose :global(.d-t) {
+    fill: var(--text);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+  .prose :global(.d-s) {
+    fill: var(--text-muted);
+    font-family: var(--font-body);
+    font-size: 12.5px;
+  }
+  .prose :global(.d-m) {
+    fill: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+  .prose :global(.d-bad) {
+    fill: var(--link);
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+</style>
