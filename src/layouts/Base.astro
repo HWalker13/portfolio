@@ -19,9 +19,11 @@ interface Props {
   ogType?: 'website' | 'article';
   /** Adds a schema.org Person block. Only the home page needs it. */
   person?: boolean;
+  /** For the 404 page: keep it out of search results and don't claim a canonical URL. */
+  noindex?: boolean;
 }
 
-const { title, description = site.description, ogType = 'website', person = false } = Astro.props;
+const { title, description = site.description, ogType = 'website', person = false, noindex = false } = Astro.props;
 const pageTitle = title ? `${title} · ${site.name}` : `${site.name}: backend & AI engineer`;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 // Social previews need absolute URLs.
@@ -45,7 +47,7 @@ const personLd = {
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
-    <link rel="canonical" href={canonical} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
 
     <!-- Icons: a tiny record. SVG for modern browsers, .ico and Apple touch icon as fallbacks. -->
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
