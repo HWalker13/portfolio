@@ -1,0 +1,45 @@
+---
+/*
+  Fonts are self-hosted through fontsource: the same files Google Fonts serves, but
+  there's no third-party request on page load.
+  Fraunces uses `full.css` on purpose. The default import only ships the opsz/wght axes,
+  and the soft 70s look needs the SOFT (and WONK) axes, which only the "full" files contain.
+*/
+import '@fontsource-variable/fraunces/full.css';
+import '@fontsource-variable/dm-sans';
+import '@fontsource-variable/jetbrains-mono';
+import frauncesLatin from '@fontsource-variable/fraunces/files/fraunces-latin-full-normal.woff2?url';
+import '../styles/global.css';
+import { site } from '../data/site';
+
+interface Props {
+  title?: string;
+  description?: string;
+}
+
+const { title, description = site.description } = Astro.props;
+const pageTitle = title ? `${title} · ${site.name}` : `${site.name}: backend & AI engineer`;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{pageTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#F3E6CC" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1E140D" media="(prefers-color-scheme: dark)" />
+    <!-- The display face renders the name in the hero (the likely LCP element), so fetch it early. -->
+    <link rel="preload" href={frauncesLatin} as="font" type="font/woff2" crossorigin />
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <main id="main">
+      <slot />
+    </main>
+  </body>
+</html>
