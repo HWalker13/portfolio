@@ -1,0 +1,413 @@
+---
+/*
+  A 70s turntable drawn in SVG. Everything is positioned in one coordinate space,
+  500 × 400 units (the plinth), using percentages so the whole thing scales with its width:
+    - platter + record center: (200, 200). Platter r = 175, vinyl r = 165, label r = 56
+    - tonearm pivot: (430, 70)
+  Layers, bottom to top:
+    1. .plinth   static SVG: wood, platter well, tonearm rest
+    2. .record   the grab target (not rotated); contains .disc, the only element that spins
+    3. .sheen    a fixed CSS conic-gradient highlight, so the grooves rotate *under* the light
+    4. .arm      tonearm SVG, rotated around its pivot
+    5. .motor    a real <button>
+  The spinning part is an HTML element, not an SVG <g>, so the browser can rasterize it once
+  and rotate it on the compositor. Rotating an SVG group would repaint every frame.
+
+  Behavior lives in src/scripts/turntable.ts (a custom element), physics in physics.ts.
+*/
+
+const uid = `tt-${Math.random().toString(36).slice(2, 8)}`;
+
+/** Deterministic PRNG so the wood grain is identical on every build. */
+function mulberry32(seed: number) {
+  return () => {
+    seed |= 0;
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+const rand = mulberry32(1973);
+const r = (min: number, max: number) => +(min + rand() * (max - min)).toFixed(1);
+
+// Wood grain: long, gently wavy strokes across the plinth.
+const grain = Array.from({ length: 26 }, (_, i) => {
+  const y = 6 + i * 15.5 + r(-4, 4);
+  return {
+    d: `M -10 ${y} C 120 ${y + r(-9, 9)}, 300 ${y + r(-9, 9)}, 510 ${y + r(-6, 6)}`,
+    dark: rand() > 0.35,
+    w: r(0.6, 2.6),
+  };
+});
+
+// Grooves from the run-out (r 66) to the lead-in (r 160), with a smooth gap between the two tracks.
+const grooves: { r: number; light: boolean }[] = [];
+for (let radius = 66, i = 0; radius <= 160; radius += 1.45, i++) {
+  if (radius > 107.5 && radius < 113.5) continue; // track gap: Side A has two tracks
+  grooves.push({ r: +radius.toFixed(2), light: i % 3 !== 0 });
+}
+
+// Strobe dots on the platter rim. They rotate with the platter, which adds another motion cue.
+const strobe = Array.from({ length: 72 }, (_, i) => i * 5);
+---
+
+<turn-table class="turntable">
+  <svg class="plinth" viewBox="0 0 500 400" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id={`${uid}-walnut`} x1="0" y1="0" x2="0.15" y2="1">
+        <stop offset="0" stop-color="#83552f"></stop>
+        <stop offset="0.45" stop-color="#6e4527"></stop>
+        <stop offset="1" stop-color="#583619"></stop>
+      </linearGradient>
+      <radialGradient id={`${uid}-well`} cx="0.5" cy="0.5" r="0.5">
+        <stop offset="0.9" stop-color="#1a0f08" stop-opacity="0.55"></stop>
+        <stop offset="1" stop-color="#1a0f08" stop-opacity="0"></stop>
+      </radialGradient>
+      <radialGradient id={`${uid}-chrome`} cx="0.35" cy="0.3" r="0.8">
+        <stop offset="0" stop-color="#f4efe6"></stop>
+        <stop offset="0.6" stop-color="#b9b2a6"></stop>
+        <stop offset="1" stop-color="#7d776d"></stop>
+      </radialGradient>
+      <clipPath id={`${uid}-plinth-clip`}>
+        <rect x="0" y="0" width="500" height="400" rx="22"></rect>
+      </clipPath>
+    </defs>
+
+    <rect x="0" y="0" width="500" height="400" rx="22" fill={`url(#${uid}-walnut)`}></rect>
+    <g clip-path={`url(#${uid}-plinth-clip)`} fill="none">
+      {
+        grain.map((g) => (
+          <path
+            d={g.d}
+            stroke={g.dark ? '#2b170a' : '#c48a55'}
+            stroke-opacity={g.dark ? 0.28 : 0.12}
+            stroke-width={g.w}
+          />
+        ))
+      }
+    </g>
+    <!-- Bevel: light top edge, dark bottom edge -->
+    <rect x="1.5" y="1.5" width="497" height="397" rx="21" fill="none" stroke="#f3e6cc" stroke-opacity="0.18" stroke-width="2"></rect>
+    <rect x="10" y="10" width="480" height="380" rx="15" fill="none" stroke="#1a0f08" stroke-opacity="0.35" stroke-width="1.5"></rect>
+
+    <!-- Recessed well under the platter -->
+    <circle cx="200" cy="203" r="186" fill={`url(#${uid}-well)`}></circle>
+
+    <!-- Tonearm base plate and rest post -->
+    <circle cx="430" cy="70" r="34" fill="#1a0f08" fill-opacity="0.35"></circle>
+    <circle cx="430" cy="70" r="30" fill={`url(#${uid}-chrome)`}></circle>
+    <!-- Rest post sits under the tube's resting position, so the arm visibly lands on it when stopped -->
+    <circle cx="430" cy="236" r="8" fill="#1a0f08" fill-opacity="0.35"></circle>
+    <circle cx="430" cy="234" r="7" fill={`url(#${uid}-chrome)`}></circle>
+  </svg>
+
+  <div
+    class="record"
+    tabindex="0"
+    role="group"
+    aria-roledescription="record"
+    aria-label="Vinyl record, Side A, 33 and a third RPM. Drag to spin it, or drag backwards to scratch."
+    aria-describedby={`${uid}-hint`}
+  >
+    <div class="disc">
+      <svg viewBox="-175 -175 350 350" aria-hidden="true" focusable="false">
+        <defs>
+          <radialGradient id={`${uid}-platter`} cx="0" cy="0" r="175" gradientUnits="userSpaceOnUse">
+            <stop offset="0.9" stop-color="#9c968c"></stop>
+            <stop offset="0.96" stop-color="#d8d2c7"></stop>
+            <stop offset="1" stop-color="#77716a"></stop>
+          </radialGradient>
+          <clipPath id={`${uid}-label-clip`}>
+            <circle r="56"></circle>
+          </clipPath>
+          <path id={`${uid}-name-arc`} d="M -43 0 A 43 43 0 0 1 43 0"></path>
+          <path id={`${uid}-matrix-arc`} d="M 0 61 A 61 61 0 1 1 0.01 61"></path>
+        </defs>
+
+        <!-- Platter rim with strobe dots -->
+        <circle r="175" fill={`url(#${uid}-platter)`}></circle>
+        <g fill="#2b2622">
+          {strobe.map((deg) => <rect x="-1.4" y="-173" width="2.8" height="4" transform={`rotate(${deg})`} />)}
+        </g>
+
+        <!-- Vinyl -->
+        <circle r="165" fill="#141110"></circle>
+        <g fill="none" stroke-width="0.7">
+          {
+            grooves.map((g) => (
+              <circle r={g.r} stroke={g.light ? '#ffffff' : '#000000'} stroke-opacity={g.light ? 0.07 : 0.6} />
+            ))
+          }
+        </g>
+        <!-- Track gap and lead-in read as glossier bands -->
+        <circle r="110.5" fill="none" stroke="#080707" stroke-width="5"></circle>
+        <circle r="163" fill="none" stroke="#0b0909" stroke-width="3.5"></circle>
+
+        <!-- Matrix number etched in the dead wax (an asymmetric detail that shows the spin) -->
+        <text class="matrix" font-size="4.6" fill="#ffffff" fill-opacity="0.28" letter-spacing="1.2">
+          <textPath href={`#${uid}-matrix-arc`}>HA-001-A · PRESSED IN SAN BERNARDINO</textPath>
+        </text>
+
+        <!-- Label -->
+        <g clip-path={`url(#${uid}-label-clip)`}>
+          <circle r="56" fill="#d9622b"></circle>
+          <rect x="-56" y="7" width="112" height="6" fill="#e0a526"></rect>
+          <rect x="-56" y="13" width="112" height="2.5" fill="#f3e6cc"></rect>
+          <rect x="-56" y="15.5" width="112" height="5" fill="#3b2314"></rect>
+        </g>
+        <circle r="56" fill="none" stroke="#3b2314" stroke-opacity="0.35" stroke-width="1"></circle>
+        <text class="label-name" font-size="8.6" fill="#fbf4e4" text-anchor="middle" letter-spacing="0.6">
+          <textPath href={`#${uid}-name-arc`} startOffset="50%">HOLDEN ANDERSON</textPath>
+        </text>
+        <!-- "33⅓" with a hand-built fraction: none of the self-hosted font subsets include U+2153 -->
+        <text class="label-speed" y="-9" font-size="15" fill="#3b2314" text-anchor="middle">
+          33<tspan font-size="7" dy="-6">1</tspan><tspan font-size="7" dy="3">⁄</tspan><tspan font-size="7" dy="3">3</tspan>
+        </text>
+        <text class="label-side" y="35" font-size="8" fill="#fbf4e4" text-anchor="middle" letter-spacing="2.4">SIDE A</text>
+        <circle r="3.6" fill="#1e140d"></circle>
+      </svg>
+    </div>
+  </div>
+
+  <div class="sheen" aria-hidden="true"></div>
+
+  <!-- Tight box around the arm (x 400–460, y 8–320) so its rotated bounds never leave the plinth -->
+  <svg class="arm" viewBox="400 8 60 312" aria-hidden="true" focusable="false">
+    <defs>
+      <linearGradient id={`${uid}-tube`} x1="0" y1="0" x2="1" y2="0">
+        <stop offset="0" stop-color="#8b857b"></stop>
+        <stop offset="0.45" stop-color="#f4efe6"></stop>
+        <stop offset="1" stop-color="#8b857b"></stop>
+      </linearGradient>
+    </defs>
+    <g class="arm-shadow" transform="translate(5 6)" fill="#1a0f08" fill-opacity="0.28" stroke="#1a0f08" stroke-opacity="0.28">
+      <path d="M 430 70 L 430 262 L 424 296" fill="none" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path>
+      <rect x="415" y="284" width="18" height="26" rx="3" transform="rotate(10 424 296)" stroke="none"></rect>
+    </g>
+    <!-- Counterweight -->
+    <rect x="417" y="16" width="26" height="30" rx="5" fill="#3a332d"></rect>
+    <rect x="417" y="22" width="26" height="4" fill="#8b857b"></rect>
+    <!-- Tube -->
+    <path d="M 430 40 L 430 262 L 424 296" fill="none" stroke={`url(#${uid}-tube)`} stroke-width="6" stroke-linecap="round" stroke-linejoin="round"></path>
+    <!-- Pivot bearing -->
+    <circle cx="430" cy="70" r="12" fill="#2b2622"></circle>
+    <circle cx="430" cy="70" r="5" fill="#b9b2a6"></circle>
+    <!-- Headshell + cartridge -->
+    <g transform="rotate(10 424 296)">
+      <rect x="415" y="284" width="18" height="26" rx="3" fill="#2b2622"></rect>
+      <rect x="418" y="296" width="12" height="10" rx="1.5" fill="#d9622b"></rect>
+      <rect x="433" y="288" width="9" height="3" rx="1.5" fill="#b9b2a6"></rect>
+    </g>
+  </svg>
+
+  <button class="motor" type="button" aria-pressed="true">
+    <span class="lamp" aria-hidden="true"></span>
+    <span class="motor-text"><span>Start</span><span class="sep"> / </span><span>Stop</span></span>
+  </button>
+
+  <p class="visually-hidden" id={`${uid}-hint`}>
+    Left and Right arrow keys nudge the record. Space starts or stops the motor.
+  </p>
+  <p class="visually-hidden" aria-live="polite" data-status></p>
+</turn-table>
+
+<script>
+  import '../scripts/turntable';
+</script>
+
+<style>
+  .turntable {
+    /* 500 × 400 plinth; every child below is placed in % of that box. */
+    position: relative;
+    display: block;
+    width: 100%;
+    max-width: 560px;
+    container-type: inline-size;
+    aspect-ratio: 5 / 4;
+    border-radius: 4.4% / 5.5%;
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.15) inset,
+      0 18px 40px -18px rgb(30 20 13 / 0.55),
+      0 6px 14px -6px rgb(30 20 13 / 0.35);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .plinth {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Platter box: center (200,200), r 175 → 350 × 350 units */
+  .record {
+    position: absolute;
+    left: 5%;
+    top: 6.25%;
+    width: 70%;
+    height: 87.5%;
+    border-radius: 50%;
+    cursor: grab;
+    /* Only the record swallows touch gestures; the rest of the page scrolls normally. */
+    touch-action: none;
+  }
+  .record:active {
+    cursor: grabbing;
+  }
+  .record:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 4px;
+  }
+
+  .disc {
+    width: 100%;
+    height: 100%;
+    transform-origin: 50% 50%;
+    will-change: transform;
+  }
+  .disc svg {
+    width: 100%;
+    height: 100%;
+  }
+
+  .label-name,
+  .label-speed,
+  .label-side {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+  }
+  .label-side {
+    font-weight: 700;
+  }
+  .matrix {
+    font-family: var(--font-mono);
+  }
+
+  /*
+    The sheen sits over the vinyl only (center (200,200), r 165) and never rotates.
+    Two opposing glints are how light falls on a real record; the mask keeps them off the label.
+  */
+  .sheen {
+    position: absolute;
+    left: 7%;
+    top: 8.75%;
+    width: 66%;
+    height: 82.5%;
+    border-radius: 50%;
+    pointer-events: none;
+    background:
+      conic-gradient(
+        from 0deg,
+        transparent 0deg 18deg,
+        rgb(255 255 255 / 0.16) 40deg,
+        transparent 66deg 196deg,
+        rgb(255 255 255 / 0.1) 220deg,
+        transparent 246deg 360deg
+      ),
+      radial-gradient(circle at 34% 28%, rgb(255 255 255 / 0.07), transparent 45%);
+    mask-image: radial-gradient(circle closest-side, transparent 34.5%, #000 36%);
+    -webkit-mask-image: radial-gradient(circle closest-side, transparent 34.5%, #000 36%);
+  }
+
+  /*
+    The arm's box is x 400–460, y 8–320 in plinth units: left 80%, top 2%, 12% × 78%.
+    The pivot (430, 70) is at 50% / 19.87% of that box.
+    Checked: every corner stays inside the plinth for rotations from 0° to 27°.
+  */
+  .arm {
+    position: absolute;
+    left: 80%;
+    top: 2%;
+    width: 12%;
+    height: 78%;
+    overflow: visible;
+    pointer-events: none;
+    transform-origin: 50% 19.87%;
+    will-change: transform;
+  }
+
+  .motor {
+    position: absolute;
+    right: 3.5%;
+    bottom: 4.5%;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    min-height: 44px;
+    padding: 0.4em 0.9em;
+    border: 1px solid rgb(0 0 0 / 0.35);
+    border-radius: 999px;
+    background: linear-gradient(#f4efe6, #c9c2b6);
+    color: #2b170a;
+    font-family: var(--font-mono);
+    font-size: clamp(0.68rem, 0.6rem + 0.4vw, 0.8rem);
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    cursor: pointer;
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.7) inset,
+      0 2px 4px rgb(0 0 0 / 0.3);
+  }
+  .motor:active {
+    transform: translateY(1px);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.3);
+  }
+  .motor:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 3px;
+  }
+  .lamp {
+    width: 0.65em;
+    height: 0.65em;
+    border-radius: 50%;
+    background: #6b5a4a;
+    box-shadow: 0 0 0 1px rgb(0 0 0 / 0.35) inset;
+  }
+  .motor[aria-pressed='true'] .lamp {
+    background: #e0a526;
+    box-shadow:
+      0 0 0 1px rgb(0 0 0 / 0.25) inset,
+      0 0 6px #e0a526;
+  }
+
+  /*
+    Narrow turntables (phones): only ~25% of the width is free right of the platter,
+    so stack the label. The button stays at least 44px tall for touch.
+  */
+  @container (max-width: 460px) {
+    .motor {
+      right: 3%;
+      bottom: 3.5%;
+      flex-direction: column;
+      gap: 0.3em;
+      padding: 0.45em 0.7em;
+      border-radius: 14px;
+      line-height: 1.1;
+    }
+    .motor-text {
+      display: grid;
+      text-align: center;
+    }
+    /* Visually hidden, not display:none, so the accessible name stays "Start / Stop". */
+    .sep {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+
+  /* Windows high contrast: keep the controls visible */
+  @media (forced-colors: active) {
+    .motor {
+      border: 1px solid ButtonText;
+    }
+  }
+</style>
