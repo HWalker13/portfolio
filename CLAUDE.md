@@ -84,7 +84,7 @@ Use the same template for each project:
 - **What I built** (short; a simple diagram is welcome where it helps, as inline SVG)
 - **The hard part / the decision**. This is the most important section.
 - **Results** with numbers, always next to their baseline or context
-- **What I'd do differently**
+- **What I'd do differently**. Stays hidden until I write it myself: each section is wrapped in one HTML comment in its `.md` file (comments are stripped from the build, so nothing ships). Publishing one means removing the wrapper and replacing the placeholder with my own words. Don't unhide or rewrite these for me.
 
 Keep each page readable in about 2 minutes.
 
@@ -194,7 +194,7 @@ Write all copy in a plain, specific, first-person voice: short sentences, concre
 
 Banned words and phrases: "passionate," "leveraging," "cutting-edge," "seamless," "robust solution," "I'm excited to," "dive into," "journey."
 
-Mark every paragraph you draft with `<!-- DRAFT: Holden to edit -->` so I can rewrite it in my own words before launch.
+Mark every paragraph you draft with `<!-- DRAFT: Holden to edit -->` so I can rewrite it in my own words before launch. HTML comments (DRAFT/TODO markers, hidden sections) are stripped from the build output by `integrations/strip-html-comments.mjs`, so they stay in the source but never ship.
 
 ## How to work
 
