@@ -87,8 +87,13 @@ Lovely: Relationship Growth is an iOS app with AI features built on what people 
 - **First paying subscribers** after launch, through RevenueCat subscriptions and free trials.
 - **305 lines** of default-deny rules, covered by **30+ pytest files**.
 
+<!--
+TODO(Holden): HIDDEN until you write your own lessons. This whole section is one HTML comment, and
+comments are stripped from the build, so none of it ships. To publish: delete this comment's first
+four lines and its closing line, then replace the placeholder below with your own words.
+
 ## What I'd do differently
 
-<!-- TODO(Holden): these are placeholders. Replace them with your own lessons. -->
-<!-- DRAFT: Holden to edit -->
+DRAFT: Holden to edit
 I'd test on React Native's New Architecture from the very first build. The cold-start crashes only showed up there, and catching them earlier would have gotten stable builds to beta users sooner.
+-->

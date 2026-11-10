@@ -101,8 +101,13 @@ Every LLM provider fails sometimes: rate limits, timeouts, server errors. I want
 - **89 tests** for swapLLM, fully mocked, with zero live API calls.
 - **73 tests** for swaptrace, with zero runtime dependencies.
 
+<!--
+TODO(Holden): HIDDEN until you write your own lessons. This whole section is one HTML comment, and
+comments are stripped from the build, so none of it ships. To publish: delete this comment's first
+four lines and its closing line, then replace the placeholder below with your own words.
+
 ## What I'd do differently
 
-<!-- TODO(Holden): these are placeholders. Replace them with your own lessons. -->
-<!-- DRAFT: Holden to edit -->
+DRAFT: Holden to edit
 I'd build tracing into swapLLM from the start. The attempt data already existed inside the loop. It just wasn't kept, and that cost me a second package to get it back.
+-->

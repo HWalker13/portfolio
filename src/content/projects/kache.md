@@ -85,8 +85,13 @@ A cache is easy to build when nothing goes wrong. I wanted to learn what a cache
 - After a simulated network partition, the replica **fully re-synced in under 2 seconds**.
 - **Zero writes lost** across 50 commands buffered during the partition.
 
+<!--
+TODO(Holden): HIDDEN until you write your own lessons. This whole section is one HTML comment, and
+comments are stripped from the build, so none of it ships. To publish: delete this comment's first
+four lines and its closing line, then replace the placeholder below with your own words.
+
 ## What I'd do differently
 
-<!-- TODO(Holden): these are placeholders. Replace them with your own lessons. -->
-<!-- DRAFT: Holden to edit -->
+DRAFT: Holden to edit
 I'd report tail latency (p99), not only p50. A cache's worst moments are the ones people remember, and the median hides them.
+-->

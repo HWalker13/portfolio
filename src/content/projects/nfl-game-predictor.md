@@ -94,8 +94,13 @@ I built it as a spec-driven pipeline. I wrote the specs and made the methodology
 <!-- DRAFT: Holden to edit -->
 The 2025 number is lower than the 64.3% from validation, which is what an honest out-of-sample test usually looks like. The frozen model is now making write-once predictions through the 2026 season, graded weekly.
 
+<!--
+TODO(Holden): HIDDEN until you write your own lessons. This whole section is one HTML comment, and
+comments are stripped from the build, so none of it ships. To publish: delete this comment's first
+four lines and its closing line, then replace the placeholder below with your own words.
+
 ## What I'd do differently
 
-<!-- TODO(Holden): these are placeholders. Replace them with your own lessons. -->
-<!-- DRAFT: Holden to edit -->
+DRAFT: Holden to edit
 I'd report a confidence interval next to every accuracy number, not only a significance test on the final comparison. A few hundred games is a small sample, and an interval makes that obvious at a glance.
+-->
