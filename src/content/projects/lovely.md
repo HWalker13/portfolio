@@ -16,8 +16,8 @@ stack:
 headlineStats:
   - value: '40+'
     context: 'beta users on stable builds before the production App Store release'
-  - value: '305'
-    context: 'lines of default-deny Firestore rules, tested by 30+ pytest files'
+  - value: 'First paying subscribers'
+    context: 'after launch, via RevenueCat subscriptions and free trials'
 proof:
   - kind: appstore
     label: App Store

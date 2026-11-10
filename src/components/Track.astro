@@ -105,6 +105,9 @@ const href = `/projects/${entry.id}/`;
     padding: 0.05em 0.35em;
     border-radius: 6px;
     background: color-mix(in srgb, var(--mustard) 28%, transparent);
+    /* A longer chip ("First paying subscribers") can wrap: give each line its own rounded highlight. */
+    -webkit-box-decoration-break: clone;
+    box-decoration-break: clone;
   }
   .context {
     color: var(--text-muted);
