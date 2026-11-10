@@ -69,7 +69,7 @@ Add a dark theme under `@media (prefers-color-scheme: dark)` using deep brown (#
 
 ### Home (`/`), a single page
 
-1. **Hero:** name, a one-line description (e.g., "Backend & AI engineer. I build things from scratch to understand them."), and the **turntable** as the visual centerpiece. Primary links are always visible: GitHub, LinkedIn, Resume (PDF), Email.
+1. **Hero:** name, a one-line description (e.g., "Backend & AI engineer. I like figuring out how things work, then shipping something people use."), and the **turntable** as the visual centerpiece. Primary links are always visible: GitHub, LinkedIn, Resume (PDF), Email.
 2. **Tracklist (projects):** styled like the back of an album sleeve, as a numbered track listing split into **Side A** and **Side B**. Each "track" shows the project name, a one-line description, 1–2 headline numbers, and proof links (App Store / PyPI / GitHub), plus a link to its liner-notes page. It must scan like a list, not a puzzle.
    - Side A: 1. Lovely, 2. NFL Game Predictor
    - Side B: 3. swapLLM + swaptrace, 4. Kache
