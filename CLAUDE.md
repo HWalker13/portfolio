@@ -44,7 +44,19 @@ Add a dark theme under `@media (prefers-color-scheme: dark)` using deep brown (#
 - Body: a clean, highly readable sans (**DM Sans** or similar).
 - Monospace for numbers/code: **JetBrains Mono** or similar.
 
-**Motifs, used with restraint:** stacked 70s stripes (orange/mustard/brown) as section dividers, rounded corners, subtle paper grain, record-sleeve framing on project cards.
+**Motifs, used with restraint:** rounded corners, subtle paper grain, record-sleeve framing on project cards.
+
+**Setting: a 70s funk living room.**
+- The hero is a deep green shag rug (#2F4A23 base, #4E6B2E and #7A8F3A fibers, soft vignette), rendered as a static pre-generated tile, never a live filter. Rug greens are decorative only, never text on cream.
+- A soft, static warm amber lamp glow lights the turntable on the rug. Static gradient only, nothing that repaints while the record spins.
+- Below the hero, cream paper surfaces (tracklist, project pages) read as an album sleeve lying across the rug's bound edge.
+- Supergraphic stripes: thick, curved bands in orange, mustard, chocolate and olive that bend around section corners, drawn as original CSS/SVG.
+- The name in the hero uses stacked multicolor offset lettering (orange, mustard, chocolate), like 70s album type, with a thin chocolate keyline so the letter edges keep their contrast.
+- On hover/focus, a small record slides partway out of a track's sleeve (just appears under `prefers-reduced-motion`).
+- Light mode is the hero version and should feel as bold as 70s supergraphics on cream. Dark mode is the late-night version of the same room.
+- Hero text and links on the rug must pass `npm run contrast` (4.5:1), including the lamp glow.
+
+**Music references:** the only music references on the site are the turntable's record labels and its Now Playing caption. Album titles, artist names and years as text are fine. No album artwork or imitations of covers, no likenesses or photos of musicians, no lyrics, and no real record-company labels, names or logos (no Apple Records apple, Motown/Tamla, Harvest, Capitol, Columbia, Jive, etc.).
 
 **Do NOT do these** (they make the site look AI-generated or templated):
 - A gradient blob hero, "Hi, I'm Holden 👋", or emoji anywhere
@@ -80,21 +92,40 @@ Keep each page readable in about 2 minutes.
 
 This is the part that should feel like me. Build it as `src/components/Turntable.astro`, with its script in `src/scripts/turntable.ts`.
 
-**Look:** a top-down or slight 3/4 view of a 70s turntable. Walnut wood-grain plinth, metal platter, black vinyl with visible grooves and a light sheen, a center label in burnt orange/mustard reading "HOLDEN ANDERSON / SIDE A / 33⅓", a tonearm, and a small start/stop button. Build it in SVG, with CSS gradients for the sheen. No raster images are needed.
+**Look:** a top-down or slight 3/4 view of a 70s turntable. Walnut wood-grain plinth, metal platter, black vinyl with visible grooves and a light sheen, a center label (see the queue below), a tonearm, and two small buttons under the plinth (Start/Stop and Switch record) with a "Now playing" caption beneath them. Build it in SVG, with CSS gradients for the sheen. No raster images are needed.
+
+**The queue.** The turntable plays these records in order, looping. The page always starts on the first one.
+1. Songs in the Key of Life, Stevie Wonder, 1976
+2. The Dark Side of the Moon, Pink Floyd, 1973
+3. The Low End Theory, A Tribe Called Quest, 1991
+4. Midnight Marauders, A Tribe Called Quest, 1993
+5. Mama's Gun, Erykah Badu, 2000
+6. The Miseducation of Lauryn Hill, Lauryn Hill, 1998
+7. Who Is Jill Scott?, Jill Scott, 2000 (full title: Who Is Jill Scott? Words and Sounds Vol. 1; the label uses the short form)
+8. Abbey Road, The Beatles, 1969
+9. Rubber Soul, The Beatles, 1965
+
+**Labels.** No real album artwork anywhere. Each record gets an ORIGINAL 70s-style center label (color, simple shapes, type) printing the album title, the artist and "Side One", the way real vinyl labels do. Long titles may wrap to two lines; the text must stay legible when the record is stopped, and every label's ink/background pair must pass `npm run contrast`.
+- Don't imitate any real cover or any real record-company label, name or logo.
+- Avoid each cover's signature motif: no orange/brown concentric-circle disc for Songs in the Key of Life; no prism, beam or spectrum for The Dark Side of the Moon; no red/green/black figure for The Low End Theory; no face collage for Midnight Marauders; no faces or portraits for any album; no carved-desk look for Miseducation; no crosswalk for Abbey Road; no stretched or warped lettering for Rubber Soul.
 
 **Behavior:**
 - It **spins on its own** at 33⅓ RPM (one rotation every 1.8s) on load, with the tonearm resting on the record.
 - **The visitor can grab the record and spin it** with mouse or touch, using Pointer Events. Track angular velocity from pointer movement around the center. On release, the record keeps that momentum and eases back toward 33⅓ RPM, as if the motor is pulling it back up to speed. Spinning backwards should work too, like a scratch.
 - **Start/stop button:** stopping winds the platter down over about 1s and lifts the tonearm off the record. Starting does the reverse.
+- **The needle plays the side.** The tonearm angle is driven by the record's accumulated rotation, not a timer. A side is about 30 rotations at 33⅓ RPM (~55s if left alone). Flicking forward advances the needle, scratching backwards moves it back out, and with the motor stopped the needle doesn't advance. These are pure, tested functions in `physics.ts`.
+- **End of a side** (needle at the run-out groove): the motor winds down, the arm lifts and returns to rest, the record slides off, the next record slides on, the motor spins up, and the arm cues and lowers. About 3s total, transform-only animation.
+- **Switch record button** next to Start/Stop, styled to match: runs the same swap to the next record. Presses during a swap are ignored. A real `<button>`, reached by keyboard right after Start/Stop.
+- **Now playing caption** under the two buttons: "Now playing: [album] · [artist]", updated on each swap. It must pass the contrast check in both themes and fit at 320px.
 - The sheen/highlight stays fixed while the grooves rotate, so the spin reads as real.
 - **No audio.** Visual only.
 
 **Engineering requirements:**
-- Animate with `requestAnimationFrame`, and only change `transform: rotate()`. No layout thrash.
+- Animate with `requestAnimationFrame`, and only change transforms (`rotate()` for the record and arm, `translateY()` for the record slide during a swap). No layout thrash.
 - Pause the loop when the turntable is offscreen (IntersectionObserver) and when the tab is hidden (`visibilitychange`).
 - `touch-action: none` only on the record itself, so page scrolling on mobile still works everywhere else.
-- **`prefers-reduced-motion`:** no auto-spin, and the record starts still. Dragging still works.
-- **Accessible:** the button is a real `<button>` with `aria-pressed`. The record is focusable with an `aria-label`, Left/Right arrows nudge it, and Space toggles the motor. Decorative SVG parts are `aria-hidden`.
+- **`prefers-reduced-motion`:** no auto-spin, the record starts still, no auto-advance to the next record, and no slide animation: Switch record swaps instantly. Dragging still works.
+- **Accessible:** Start/Stop is a real `<button>` with `aria-pressed`. The record is focusable with an `aria-label`, Left/Right arrows nudge it, and Space toggles the motor. Decorative SVG parts are `aria-hidden`. A visually hidden live region announces "Now playing: [album] by [artist]" only when the record changes, never during playback.
 - Works on a 375px-wide phone, with the turntable scaling down.
 - Isolate the physics (angle, velocity, friction, motor torque) in small pure functions so they're easy to read and tweak.
 

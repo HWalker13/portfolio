@@ -1,0 +1,120 @@
+[
+  {
+    "album": "Songs in the Key of Life",
+    "artist": "Stevie Wonder",
+    "year": 1976,
+    "label": {
+      "bg": "#F3E6CC",
+      "ink": "#3B2314",
+      "accent": "#D9622B",
+      "accent2": "#6B7B3A",
+      "motif": "stripes",
+      "detail": "piano"
+    }
+  },
+  {
+    "album": "The Dark Side of the Moon",
+    "artist": "Pink Floyd",
+    "year": 1973,
+    "label": {
+      "bg": "#3B2314",
+      "ink": "#F3E6CC",
+      "accent": "#E0A526",
+      "accent2": "#D9622B",
+      "motif": "dots",
+      "detail": "ekg"
+    }
+  },
+  {
+    "album": "The Low End Theory",
+    "artist": "A Tribe Called Quest",
+    "year": 1991,
+    "label": {
+      "bg": "#E0A526",
+      "ink": "#3B2314",
+      "accent": "#3B2314",
+      "accent2": "#6B7B3A",
+      "motif": "bars",
+      "detail": "bass"
+    }
+  },
+  {
+    "album": "Midnight Marauders",
+    "artist": "A Tribe Called Quest",
+    "year": 1993,
+    "label": {
+      "bg": "#6E4527",
+      "ink": "#F3E6CC",
+      "accent": "#E0A526",
+      "accent2": "#F3E6CC",
+      "motif": "moon",
+      "detail": "clock"
+    }
+  },
+  {
+    "album": "Mama's Gun",
+    "artist": "Erykah Badu",
+    "year": 2000,
+    "label": {
+      "bg": "#2F4A23",
+      "ink": "#F3E6CC",
+      "accent": "#E0A526",
+      "accent2": "#D9622B",
+      "motif": "waves",
+      "detail": "vine"
+    }
+  },
+  {
+    "album": "The Miseducation of Lauryn Hill",
+    "artist": "Lauryn Hill",
+    "year": 1998,
+    "label": {
+      "bg": "#A8441A",
+      "ink": "#F3E6CC",
+      "accent": "#E0A526",
+      "accent2": "#3B2314",
+      "motif": "checker",
+      "detail": "notebook"
+    }
+  },
+  {
+    "album": "Who Is Jill Scott?",
+    "artist": "Jill Scott",
+    "year": 2000,
+    "label": {
+      "bg": "#4B5727",
+      "ink": "#F3E6CC",
+      "accent": "#E0A526",
+      "accent2": "#D9622B",
+      "motif": "diamonds",
+      "detail": "subtitle",
+      "subtitle": "Words and Sounds Vol. 1"
+    }
+  },
+  {
+    "album": "Abbey Road",
+    "artist": "The Beatles",
+    "year": 1969,
+    "label": {
+      "bg": "#FBF4E4",
+      "ink": "#3B2314",
+      "accent": "#D9622B",
+      "accent2": "#E0A526",
+      "motif": "zigzag",
+      "detail": "plaque"
+    }
+  },
+  {
+    "album": "Rubber Soul",
+    "artist": "The Beatles",
+    "year": 1965,
+    "label": {
+      "bg": "#F2CB6B",
+      "ink": "#3B2314",
+      "accent": "#6E4527",
+      "accent2": "#D9622B",
+      "motif": "scallops",
+      "detail": "paisley"
+    }
+  }
+]

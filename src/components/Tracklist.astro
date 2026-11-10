@@ -5,7 +5,7 @@
 */
 import { getCollection } from 'astro:content';
 import Track from './Track.astro';
-import Stripes from './Stripes.astro';
+import Ribbon from './Ribbon.astro';
 import About from './About.astro';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
@@ -16,14 +16,13 @@ const sides = (['A', 'B'] as const).map((side) => ({
 ---
 
 <section class="sleeve container" aria-labelledby="tracklist-title">
-  <div class="sleeve-inner">
+  <div class="sleeve-inner sleeve-inner--ribbon">
     <div class="sleeve-head">
       <h2 id="tracklist-title">Tracklist</h2>
       <!-- DRAFT: Holden to edit -->
       <p class="lede">Four projects. Each one links to something you can check yourself: an app, a package or a repo.</p>
     </div>
-    <Stripes class="sleeve-stripes" />
-
+    <Ribbon class="tracklist-ribbon">
     <div class="sides">
       {
         sides.map(({ side, tracks }) => (
@@ -40,8 +39,8 @@ const sides = (['A', 'B'] as const).map((side) => ({
         ))
       }
     </div>
+    </Ribbon>
 
-    <Stripes class="sleeve-stripes" />
     <About />
   </div>
 </section>
@@ -51,7 +50,7 @@ const sides = (['A', 'B'] as const).map((side) => ({
     margin-top: var(--space-3);
     color: var(--text-muted);
   }
-  .sleeve :global(.sleeve-stripes) {
+  .sleeve :global(.tracklist-ribbon) {
     margin-block: var(--space-4) var(--space-5);
   }
 

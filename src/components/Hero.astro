@@ -27,6 +27,8 @@ import { site } from '../data/site';
     </div>
 
     <div class="deck">
+      <!-- Floor-lamp glow: a static gradient behind the turntable. It never repaints while the record spins. -->
+      <span class="lamp" aria-hidden="true"></span>
       <Turntable />
     </div>
   </div>
@@ -58,12 +60,22 @@ import { site } from '../data/site';
   .eyebrow span {
     white-space: nowrap;
   }
+  /*
+    70s album lettering: cream letters, then stacked offset layers.
+    The first layer is a thin chocolate keyline, so the cream edge always meets a dark color
+    (11.8:1). Cream directly on orange would be 2.97:1. Offsets are in em, so they scale with the type.
+  */
   h1 {
     margin-top: var(--space-2);
+    padding-bottom: 0.1em; /* room for the deepest layer */
     color: var(--on-rug);
     font-size: clamp(2.8rem, 2rem + 4.2vw, 5.2rem);
     line-height: 0.95;
-    text-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
+    text-shadow:
+      0.02em 0.02em 0 var(--headline-keyline),
+      0.045em 0.045em 0 var(--band-1),
+      0.07em 0.07em 0 var(--band-2),
+      0.095em 0.095em 0 var(--band-3);
   }
   .tagline {
     margin-top: var(--space-4);
@@ -117,8 +129,54 @@ import { site } from '../data/site';
     font-weight: 500;
   }
 
+  /* The deck is exactly the turntable's size, so the lamp scales with the turntable, not the column. */
   .deck {
+    position: relative;
+    isolation: isolate;
     display: grid;
     justify-items: center;
+    width: 100%;
+    max-width: 560px;
+    justify-self: center;
+  }
+  .deck > :global(turn-table) {
+    position: relative;
+    z-index: 1;
+  }
+
+  /*
+    The lamp stands off to the upper right, so its pool of light is centered up and to the
+    right of the record. Glow falls off: peak → half at 45% → nothing at the edge.
+    Hero text must sit where the glow is under --lamp-on-text-max; the browser audit checks it.
+  */
+  /*
+    The pool of light is an ellipse, wider than it is tall, the way lamplight spreads across a
+    floor. Stacked layout (phones/tablets): a smaller pool centered on the turntable, so it falls
+    off before the text above. Side by side: a bigger pool up and to the right of the record.
+  */
+  .lamp {
+    position: absolute;
+    z-index: 0;
+    left: 54%;
+    top: 56%;
+    width: 160%;
+    height: 112%;
+    transform: translate(-50%, -50%);
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      rgb(var(--lamp) / var(--lamp-peak)) 0%,
+      rgb(var(--lamp) / calc(var(--lamp-peak) * 0.5)) 45%,
+      rgb(var(--lamp) / 0) 100%
+    );
+    pointer-events: none;
+  }
+  @media (min-width: 900px) {
+    .lamp {
+      left: 66%;
+      top: 44%;
+      width: 165%;
+      height: 175%;
+    }
   }
 </style>

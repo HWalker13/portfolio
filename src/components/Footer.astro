@@ -3,7 +3,10 @@ import { site } from '../data/site';
 const year = new Date().getFullYear();
 ---
 
-<footer class="footer container">
+<footer class="footer">
+  <!-- 70s sunset supergraphic in the corner of the floor. Decorative; text never sits on it. -->
+  <span class="sunset" aria-hidden="true"></span>
+  <div class="container inner">
   <div class="contact">
     <p class="say">Get in touch</p>
     <a class="email" href={`mailto:${site.links.email}`}>{site.links.email}</a>
@@ -16,13 +19,48 @@ const year = new Date().getFullYear();
   <p class="colophon">
     © {year} {site.name}. Built with <a href="https://astro.build">Astro</a>. No cookies, no analytics.
   </p>
+  </div>
 </footer>
 
 <style>
   .footer {
+    --sun: clamp(9.5rem, 26vw, 21rem);
+    position: relative;
+    overflow: hidden;
+  }
+  .inner {
+    position: relative;
+    z-index: 1;
     display: grid;
     gap: var(--space-4);
     padding-block: var(--space-6) var(--space-5);
+  }
+  /* Phones: the text column is full width, so keep every line above the arcs. */
+  @media (max-width: 719px) {
+    .inner {
+      padding-bottom: calc(var(--sun) + var(--space-3));
+    }
+  }
+
+  /* Quarter-circle sunset: an orange sun and three bands, anchored to the bottom-right corner */
+  .sunset {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    width: var(--sun);
+    height: var(--sun);
+    pointer-events: none;
+    background: radial-gradient(
+      circle var(--sun) at 100% 100%,
+      var(--band-1) 0 calc(var(--sun) * 0.36),
+      transparent calc(var(--sun) * 0.36 + 0.5px) calc(var(--sun) * 0.44),
+      var(--band-2) calc(var(--sun) * 0.44 + 0.5px) calc(var(--sun) * 0.58),
+      transparent calc(var(--sun) * 0.58 + 0.5px) calc(var(--sun) * 0.64),
+      var(--band-3) calc(var(--sun) * 0.64 + 0.5px) calc(var(--sun) * 0.78),
+      transparent calc(var(--sun) * 0.78 + 0.5px) calc(var(--sun) * 0.84),
+      var(--band-4) calc(var(--sun) * 0.84 + 0.5px) calc(var(--sun) * 0.98),
+      transparent calc(var(--sun) * 0.98 + 0.5px)
+    );
   }
   .say {
     font-family: var(--font-display);

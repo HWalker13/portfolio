@@ -83,6 +83,12 @@ for (const [mode, t] of [['light', light], ['dark', dark]]) {
 
   // Stat numbers sit on color-mix(in srgb, mustard 28%, transparent) over the sleeve surface.
   check(`${mode}: --text on stat chip (28% mustard over --surface)`, c('--text'), over(c('--mustard'), 0.28, c('--surface')), BODY);
+  // Track cards are --bg panels on the sleeve; their chips sit on --bg.
+  check(`${mode}: --text on stat chip (28% mustard over --bg)`, c('--text'), over(c('--mustard'), 0.28, c('--bg')), BODY);
+
+  // Now playing caption: a paper tag under the turntable, the same in both themes.
+  check(`${mode}: now playing caption (--pill-text on --pill-bg)`, c('--pill-text'), c('--pill-bg'), BODY);
+  check(`${mode}: "Now playing:" key (--now-playing-key on --pill-bg)`, c('--now-playing-key'), c('--pill-bg'), BODY);
 
   // Pills (hero links) are solid, so they don't depend on the rug.
   check(`${mode}: --pill-text on --pill-bg`, c('--pill-text'), c('--pill-bg'), BODY);
@@ -98,8 +104,30 @@ for (const [mode, t] of [['light', light], ['dark', dark]]) {
   check(`${mode}: --on-rug on rug (worst pixel)`, c('--on-rug'), worst, BODY);
   check(`${mode}: --on-rug-muted on rug (worst pixel)`, c('--on-rug-muted'), worst, BODY);
   check(`${mode}: --focus-on-rug ring on rug (worst pixel)`, c('--focus-on-rug'), worst, UI);
+
+  // Lamp glow: the most glow allowed behind hero text, on top of the worst rug pixel.
+  const lamp = resolve(t, '--lamp').split(/\s+/).map(Number);
+  const lampMax = Number(resolve(t, '--lamp-on-text-max'));
+  const lit = over(lamp, lampMax, worst);
+  rows.push(`      ${mode} rug + lamp: ${lampMax} amber glow over the worst pixel → ${toHex(lit)}`);
+  check(`${mode}: --on-rug on lamp-lit rug`, c('--on-rug'), lit, BODY);
+  check(`${mode}: --on-rug-muted on lamp-lit rug`, c('--on-rug-muted'), lit, BODY);
+  check(`${mode}: --focus-on-rug ring on lamp-lit rug`, c('--focus-on-rug'), lit, UI);
+
+  // Hero name: the cream letter edge touches the chocolate keyline (orange/mustard sit behind it).
+  check(`${mode}: --on-rug letters against --headline-keyline`, c('--on-rug'), c('--headline-keyline'), BODY);
   check(`${mode}: --pill-bg edge on rug (worst pixel)`, c('--pill-bg'), worst, UI);
 }
+
+// Record labels: title/artist ink on each label's background (src/data/records.json).
+const records = JSON.parse(readFileSync(new URL('../src/data/records.json', import.meta.url), 'utf8'));
+for (const r of records) check(`label: ${r.album}`, toRgb(r.label.ink), toRgb(r.label.bg), BODY);
+// Details that sit behind text
+const byDetail = (d) => records.find((r) => r.label.detail === d);
+const plaque = byDetail('plaque');
+check(`label detail: ${plaque.album} title on the white street-sign plaque`, toRgb(plaque.label.ink), toRgb('#FFFFFF'), BODY);
+const notebook = byDetail('notebook');
+check(`label detail: ${notebook.album} artist over a ruled line (#7D2F10)`, toRgb(notebook.label.ink), toRgb('#7D2F10'), BODY);
 
 console.log(rows.join('\n'));
 
@@ -115,6 +143,7 @@ const info = [
   ['light: --rug-fiber-light on --bg', l('--rug-fiber-light'), l('--bg')],
   ['dark: light-mode --orange-ink on --bg', l('--orange-ink'), d('--bg')],
   ['rug: dark-mode link orange on --rug-base (why rug links are pills)', d('--link'), l('--rug-base')],
+  ['hero name: cream directly on orange, without the keyline', l('--cream'), l('--burnt-orange')],
 ];
 console.log('\nDecorative only, never used as text:');
 for (const [label, fg, bg] of info) console.log(`  ----  ${ratio(fg, bg).toFixed(2).padStart(5)}:1  ${label}`);

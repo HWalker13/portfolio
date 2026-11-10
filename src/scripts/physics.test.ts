@@ -1,7 +1,25 @@
 import { describe, expect, it } from 'vitest';
+import records from '../data/records.json';
 import {
+  ARM_GEOMETRY,
   PARAMS,
   RPM_33,
+  SIDE_DEGREES,
+  SLIDE_DISTANCE,
+  SWAP_DURATION,
+  advanceSwap,
+  armAngleForRadius,
+  isEndOfSide,
+  needleAngle,
+  needleRadius,
+  nextIndex,
+  recordSlide,
+  requestSwap,
+  stepProgress,
+  stepTonearm,
+  stylusPosition,
+  type Swap,
+  type Tonearm,
   approach,
   clampDt,
   clampVelocity,
@@ -176,14 +194,164 @@ describe('releaseVelocity', () => {
 });
 
 describe('stepArm', () => {
-  it('swings onto the record when the motor starts and settles exactly', () => {
+  it('eases to a target and settles exactly', () => {
     let a = 0;
-    for (let i = 0; i < 120; i++) a = stepArm(a, true, 0, 27, 1 / 60);
+    for (let i = 0; i < 120; i++) a = stepArm(a, 27, 1 / 60);
     expect(a).toBe(27);
-  });
-  it('lifts back to rest when the motor stops', () => {
-    let a = 27;
-    for (let i = 0; i < 120; i++) a = stepArm(a, false, 0, 27, 1 / 60);
+    for (let i = 0; i < 120; i++) a = stepArm(a, 0, 1 / 60);
     expect(a).toBe(0);
+  });
+});
+
+describe('rotation → needle angle', () => {
+  it('solves the arm triangle: the stylus lands at the requested radius', () => {
+    for (const r of [ARM_GEOMETRY.leadIn, 120, 100, ARM_GEOMETRY.runOut]) {
+      const s = stylusPosition(armAngleForRadius(r));
+      expect(Math.hypot(s.x - ARM_GEOMETRY.center.x, s.y - ARM_GEOMETRY.center.y)).toBeCloseTo(r, 6);
+    }
+  });
+
+  it('starts at the lead-in (~24°) and ends at the run-out (~40°), swinging steadily inward', () => {
+    expect(needleAngle(0)).toBeCloseTo(23.78, 1);
+    expect(needleAngle(1)).toBeCloseTo(39.85, 1);
+    let prev = -Infinity;
+    for (let p = 0; p <= 1.0001; p += 0.05) {
+      const a = needleAngle(p);
+      expect(a).toBeGreaterThan(prev);
+      prev = a;
+    }
+  });
+
+  it('maps rotation to progress: 30 rotations is the whole side', () => {
+    expect(SIDE_DEGREES).toBe(30 * 360);
+    expect(stepProgress(0, 15 * 360, true)).toBeCloseTo(0.5, 10);
+    expect(needleRadius(0.5)).toBeCloseTo((ARM_GEOMETRY.leadIn + ARM_GEOMETRY.runOut) / 2, 10);
+  });
+
+  it('left alone at 33⅓ RPM, a side lasts about 54 s', () => {
+    let state: PlatterState = { angle: 0, velocity: RPM_33 };
+    let progress = 0;
+    let t = 0;
+    while (!isEndOfSide(progress) && t < 120) {
+      state = stepPlatter(state, true, 1 / 60);
+      progress = stepProgress(progress, state.delta ?? 0, true);
+      t += 1 / 60;
+    }
+    expect(t).toBeGreaterThan(53.5);
+    expect(t).toBeLessThan(54.5);
+  });
+
+  it('a forward flick advances the needle further than playing would', () => {
+    let fast: PlatterState = { angle: 0, velocity: 2400 };
+    let slow: PlatterState = { angle: 0, velocity: RPM_33 };
+    let pf = 0.2;
+    let ps = 0.2;
+    for (let i = 0; i < 60; i++) {
+      fast = stepPlatter(fast, true, 1 / 60);
+      slow = stepPlatter(slow, true, 1 / 60);
+      pf = stepProgress(pf, fast.delta ?? 0, true);
+      ps = stepProgress(ps, slow.delta ?? 0, true);
+    }
+    expect(pf).toBeGreaterThan(ps);
+  });
+});
+
+describe('backwards scratch', () => {
+  it('reduces progress (the needle moves back out)', () => {
+    expect(stepProgress(0.5, -720, true)).toBeCloseTo(0.5 - 720 / SIDE_DEGREES, 10);
+  });
+  it('never goes before the lead-in', () => {
+    expect(stepProgress(0.01, -3600, true)).toBe(0);
+  });
+  it('does nothing with the needle up (motor stopped)', () => {
+    expect(stepProgress(0.5, 3600, false)).toBe(0.5);
+    expect(stepProgress(0.5, -3600, false)).toBe(0.5);
+  });
+});
+
+describe('end of side', () => {
+  it('is detected at the run-out groove and not before', () => {
+    expect(isEndOfSide(0.999)).toBe(false);
+    expect(isEndOfSide(1)).toBe(true);
+    expect(stepProgress(0.999, 3600, true)).toBe(1); // clamped at the run-out
+  });
+});
+
+describe('stepTonearm', () => {
+  it('cues to the groove, drops in, then rides it exactly', () => {
+    let arm: Tonearm = { angle: 0, down: false };
+    for (let i = 0; i < 120; i++) arm = stepTonearm(arm, true, 0, 1 / 60);
+    expect(arm.down).toBe(true);
+    expect(arm.angle).toBe(needleAngle(0));
+    arm = stepTonearm(arm, true, 0.5, 1 / 60);
+    expect(arm.angle).toBe(needleAngle(0.5)); // rigid in the groove, no lag
+  });
+  it('lifts and returns to rest when the motor stops', () => {
+    let arm: Tonearm = { angle: needleAngle(0.3), down: true };
+    for (let i = 0; i < 120; i++) arm = stepTonearm(arm, false, 0.3, 1 / 60);
+    expect(arm).toEqual({ angle: 0, down: false });
+  });
+});
+
+describe('queue', () => {
+  it('has the nine records in order, starting with Songs in the Key of Life', () => {
+    expect(records).toHaveLength(9);
+    expect(records[0]?.album).toBe('Songs in the Key of Life');
+    expect(records[8]?.album).toBe('Rubber Soul');
+  });
+  it('wraps from the last record back to the first', () => {
+    expect(nextIndex(0, 9)).toBe(1);
+    expect(nextIndex(8, 9)).toBe(0);
+    let i = 0;
+    for (let k = 0; k < 9; k++) i = nextIndex(i, records.length);
+    expect(i).toBe(0);
+  });
+});
+
+describe('record swap', () => {
+  it('ignores a switch while a swap is already running', () => {
+    const first = requestSwap(null);
+    expect(first.accepted).toBe(true);
+    const mid = advanceSwap(first.swap, 0.5).swap;
+    const second = requestSwap(mid);
+    expect(second.accepted).toBe(false);
+    expect(second.swap).toBe(mid); // unchanged: same swap, same elapsed time
+  });
+
+  it('runs stopping → unloading → loading → starting in about 3 s, changing the record once', () => {
+    let swap: Swap = requestSwap(null).swap;
+    const phases: string[] = [];
+    let changes = 0;
+    let t = 0;
+    let done = false;
+    while (!done) {
+      const r = advanceSwap(swap, 1 / 60);
+      swap = r.swap;
+      done = r.done;
+      t += 1 / 60;
+      if (r.changeRecord) {
+        changes++;
+        expect(r.phase).toBe('loading');
+      }
+      if (r.phase && phases.at(-1) !== r.phase) phases.push(r.phase);
+    }
+    expect(phases).toEqual(['stopping', 'unloading', 'loading', 'starting']);
+    expect(changes).toBe(1);
+    expect(t).toBeCloseTo(SWAP_DURATION, 1);
+    expect(SWAP_DURATION).toBeCloseTo(3, 10);
+  });
+
+  it('slides the record out of sight and back', () => {
+    expect(recordSlide('unloading', 0)).toBe(0);
+    expect(recordSlide('unloading', 1)).toBe(SLIDE_DISTANCE);
+    expect(recordSlide('loading', 0)).toBe(SLIDE_DISTANCE);
+    expect(recordSlide('loading', 1)).toBe(0);
+    expect(recordSlide('starting', 0.5)).toBe(0);
+    expect(recordSlide('unloading', 1, 2.6)).toBe(2.6); // measured distance on the home page
+  });
+
+  it('pauses with the page: a long hidden-tab gap only advances one clamped step', () => {
+    const r = advanceSwap({ elapsed: 0.1 }, 10);
+    expect(r.swap?.elapsed).toBeCloseTo(0.1 + PARAMS.maxDt, 10);
   });
 });

@@ -8,7 +8,7 @@ import { getCollection, render, type CollectionEntry } from 'astro:content';
 import Base from '../../layouts/Base.astro';
 import Footer from '../../components/Footer.astro';
 import ProofLinks from '../../components/ProofLinks.astro';
-import Stripes from '../../components/Stripes.astro';
+import Ribbon from '../../components/Ribbon.astro';
 
 export const getStaticPaths = (async () => {
   const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
@@ -38,7 +38,7 @@ const { Content } = await render(entry);
   </section>
 
   <article class="sleeve container">
-    <div class="sleeve-inner">
+    <div class="sleeve-inner sleeve-inner--ribbon">
       <header class="notes-head">
         <p class="eyebrow">Side {side} · Track {track} · Liner notes</p>
         <h1>{title}</h1>
@@ -73,11 +73,11 @@ const { Content } = await render(entry);
         </dl>
       </header>
 
-      <Stripes />
-
-      <div class="prose">
-        <Content />
-      </div>
+      <Ribbon class="notes-ribbon">
+        <div class="prose">
+          <Content />
+        </div>
+      </Ribbon>
 
       <nav class="tracknav" aria-label="Other tracks">
         {
@@ -181,8 +181,11 @@ const { Content } = await render(entry);
     font-weight: 600;
   }
 
+  :global(.notes-ribbon) {
+    margin-top: var(--space-4);
+  }
   .tracknav {
-    margin-top: var(--space-6);
+    margin-top: var(--space-5);
     padding-top: var(--space-4);
     border-top: 3px solid var(--text);
     display: flex;

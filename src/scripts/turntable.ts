@@ -6,26 +6,45 @@
   a module and runs on load. So we get the same "do nothing until it's on screen" effect with
   an IntersectionObserver, and the custom element gives us connect/disconnect lifecycle for free.
 
-  Rendering rule: the only DOM writes per frame are two `transform: rotate()` values.
-  Layout is read once per drag (getBoundingClientRect on pointerdown), never per frame.
+  How it "plays":
+    - The needle's position comes from how far the record has actually turned (physics.ts:
+      stepProgress → needleRadius → armAngleForRadius). Flick forward and the arm jumps in,
+      scratch backwards and it moves back out. With the motor off the arm is up, so nothing moves it.
+    - At the run-out groove the record swaps: a small state machine (advanceSwap) runs
+      stopping → unloading → loading → starting over ~3 s of simulated time, so it pauses
+      with the page.
+
+  Rendering rule: the only per-frame DOM writes are transforms (record rotate, arm rotate,
+  record slide). Layout is read once per drag (getBoundingClientRect on pointerdown).
+  Changing which label is shown happens once per swap, while the record is out of sight.
 */
+import records from '../data/records.json';
 import {
   PARAMS,
   RPM_33,
+  advanceSwap,
   isAtRest,
+  isEndOfSide,
+  needleAngle,
+  nextIndex,
   normalizeAngle,
   pointerAngle,
+  SLIDE_DISTANCE,
+  recordSlide,
   releaseVelocity,
-  stepArm,
+  requestSwap,
   stepPlatter,
+  stepProgress,
+  stepTonearm,
   unwrap,
   type PlatterState,
   type PointerSample,
+  type Swap,
+  type Tonearm,
 } from './physics';
 
-/** Tonearm angles (degrees, clockwise around the pivot). 27° puts the stylus on the outer grooves. */
+/** Tonearm rest angle (degrees, clockwise around the pivot). */
 const ARM_REST = 0;
-const ARM_PLAY = 27;
 /** Arrow-key nudge. */
 const NUDGE_DEG = 15;
 /** Ignore pointer samples this close to the spindle; the angle there is all noise. */
@@ -35,12 +54,25 @@ class TurnTable extends HTMLElement {
   private record!: HTMLElement;
   private disc!: HTMLElement;
   private arm!: SVGElement;
-  private button!: HTMLButtonElement;
+  private motorBtn!: HTMLButtonElement;
+  private switchBtn!: HTMLButtonElement;
   private status!: HTMLElement;
+  private caption!: HTMLElement;
+  private labels: SVGGElement[] = [];
 
   private platter: PlatterState = { angle: 0, velocity: 0 };
   private motorOn = false;
-  private armAngle = ARM_REST;
+  private tonearm: Tonearm = { angle: ARM_REST, down: false };
+  /** 0 = lead-in groove, 1 = run-out groove */
+  private progress = 0;
+  private recordIndex = 0;
+  private swap: Swap = null;
+  /** Record offset during a swap, in record heights */
+  private slide = 0;
+  /** How far this swap slides the record (record heights), measured when the swap starts */
+  private slideDistance = SLIDE_DISTANCE;
+  /** Rotation from drags and arrow keys since the last frame (°, unwrapped) */
+  private pendingDelta = 0;
 
   private dragging = false;
   private pointerId = -1;
@@ -52,8 +84,7 @@ class TurnTable extends HTMLElement {
   private visible = false;
   private raf = 0;
   private lastTime = 0;
-  private renderedAngle = Number.NaN;
-  private renderedArm = Number.NaN;
+  private rendered = { angle: NaN, arm: NaN, slide: NaN };
 
   private reduceMotion!: MediaQueryList;
   private observer?: IntersectionObserver;
@@ -63,12 +94,21 @@ class TurnTable extends HTMLElement {
     this.record = this.querySelector('.record')!;
     this.disc = this.querySelector('.disc')!;
     this.arm = this.querySelector('.arm')!;
-    this.button = this.querySelector('.motor')!;
+    this.motorBtn = this.querySelector('.motor')!;
+    this.switchBtn = this.querySelector('.switch')!;
     this.status = this.querySelector('[data-status]')!;
+    this.caption = this.querySelector('[data-now-playing]')!;
+    this.labels = [...this.querySelectorAll<SVGGElement>('[data-record]')];
     this.reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 
-    // Reduced motion: the record starts still and the arm rests. Dragging and the button still work.
-    this.setMotor(!this.reduceMotion.matches, { instant: true, announce: false });
+    // The page always starts on the first record, at the lead-in.
+    // Reduced motion: the record starts still with the arm at rest.
+    const autoplay = !this.reduceMotion.matches;
+    this.motorOn = autoplay;
+    this.platter = { angle: 0, velocity: autoplay ? RPM_33 : 0 };
+    this.tonearm = autoplay ? { angle: needleAngle(0), down: true } : { angle: ARM_REST, down: false };
+    this.motorBtn.setAttribute('aria-pressed', String(autoplay));
+    this.render();
 
     this.abort = new AbortController();
     const opts = { signal: this.abort.signal };
@@ -79,12 +119,16 @@ class TurnTable extends HTMLElement {
     this.record.addEventListener('pointercancel', this.onPointerUp, opts);
     this.record.addEventListener('lostpointercapture', this.onPointerUp, opts);
     this.record.addEventListener('keydown', this.onKeyDown, opts);
-    this.button.addEventListener('click', () => this.setMotor(!this.motorOn), opts);
+    this.motorBtn.addEventListener('click', () => this.setMotor(!this.motorOn), opts);
+    this.switchBtn.addEventListener('click', () => this.startSwap(), opts);
     document.addEventListener('visibilitychange', this.onVisibility, opts);
     this.reduceMotion.addEventListener(
       'change',
       (e) => {
-        if (e.matches && this.motorOn) this.setMotor(false, { instant: true });
+        if (!e.matches) return;
+        // Switching to reduced motion mid-swap: finish it instantly.
+        if (this.swap) this.finishSwapInstantly();
+        if (this.motorOn) this.setMotor(false);
       },
       opts,
     );
@@ -105,13 +149,16 @@ class TurnTable extends HTMLElement {
 
   // ── Loop ────────────────────────────────────────────────────────────────
 
-  private armTarget() {
-    return this.motorOn ? ARM_PLAY : ARM_REST;
-  }
-
   /** Is there anything left to animate? If not, the loop sleeps until something changes. */
   private needsFrames() {
-    return this.dragging || !isAtRest(this.platter, this.motorOn) || this.armAngle !== this.armTarget();
+    const armSettled = this.motorOn ? this.tonearm.down : this.tonearm.angle === ARM_REST;
+    return (
+      this.dragging ||
+      this.swap !== null ||
+      this.pendingDelta !== 0 ||
+      !isAtRest(this.platter, this.motorOn) ||
+      !armSettled
+    );
   }
 
   private canRun() {
@@ -131,28 +178,59 @@ class TurnTable extends HTMLElement {
 
   private frame = (now: number) => {
     this.raf = 0;
-    // stepPlatter/stepArm clamp dt to PARAMS.maxDt, so a long frame can't make the record jump.
+    // Every step function clamps dt to PARAMS.maxDt, so a long frame can't make anything jump.
     const dt = (now - this.lastTime) / 1000;
     this.lastTime = now;
 
-    if (!this.dragging) this.platter = stepPlatter(this.platter, this.motorOn, dt);
-    this.armAngle = this.reduceMotion.matches
-      ? this.armTarget()
-      : stepArm(this.armAngle, this.motorOn, ARM_REST, ARM_PLAY, dt);
+    // 1. Record swap state machine
+    if (this.swap) {
+      const s = advanceSwap(this.swap, dt);
+      this.swap = s.swap;
+      if (s.changeRecord) this.loadRecord(nextIndex(this.recordIndex, records.length));
+      if (s.phase === 'starting' || s.done) this.setMotorState(true);
+      else if (s.phase) this.setMotorState(false);
+      this.slide = recordSlide(s.phase, s.t, this.slideDistance);
+    }
+
+    // 2. Platter: free-spinning unless a hand is on it
+    let delta = this.pendingDelta;
+    this.pendingDelta = 0;
+    if (!this.dragging) {
+      this.platter = stepPlatter(this.platter, this.motorOn, dt);
+      delta += this.platter.delta ?? 0;
+    }
+
+    // 3. Needle: only a needle in the groove follows the record
+    const needleDown = this.tonearm.down && this.motorOn && !this.swap;
+    this.progress = stepProgress(this.progress, delta, needleDown);
+    this.tonearm = this.reduceMotion.matches ? this.snapArm() : stepTonearm(this.tonearm, this.motorOn, this.progress, dt, ARM_REST);
+
+    // 4. End of the side
+    if (needleDown && isEndOfSide(this.progress)) this.endOfSide();
 
     this.render();
     if (this.canRun()) this.raf = requestAnimationFrame(this.frame);
   };
 
-  /** The only DOM writes: two rotations, and only when the value changed. */
+  /** Reduced motion: the arm doesn't swing, it's simply where it should be. */
+  private snapArm(): Tonearm {
+    return this.motorOn ? { angle: needleAngle(this.progress), down: true } : { angle: ARM_REST, down: false };
+  }
+
+  /** The only DOM writes: transforms, and only when a value changed. */
   private render() {
-    if (this.platter.angle !== this.renderedAngle) {
-      this.disc.style.transform = `rotate(${this.platter.angle.toFixed(2)}deg)`;
-      this.renderedAngle = this.platter.angle;
+    const { angle } = this.platter;
+    if (angle !== this.rendered.angle) {
+      this.disc.style.transform = `rotate(${angle.toFixed(2)}deg)`;
+      this.rendered.angle = angle;
     }
-    if (this.armAngle !== this.renderedArm) {
-      this.arm.style.transform = `rotate(${this.armAngle.toFixed(2)}deg)`;
-      this.renderedArm = this.armAngle;
+    if (this.tonearm.angle !== this.rendered.arm) {
+      this.arm.style.transform = `rotate(${this.tonearm.angle.toFixed(2)}deg)`;
+      this.rendered.arm = this.tonearm.angle;
+    }
+    if (this.slide !== this.rendered.slide) {
+      this.record.style.transform = this.slide ? `translateY(${(this.slide * 100).toFixed(2)}%)` : '';
+      this.rendered.slide = this.slide;
     }
   }
 
@@ -161,25 +239,87 @@ class TurnTable extends HTMLElement {
     else this.start();
   };
 
-  // ── Motor ───────────────────────────────────────────────────────────────
+  // ── Motor, end of side, swap ────────────────────────────────────────────
 
-  private setMotor(on: boolean, { instant = false, announce = true } = {}) {
-    this.motorOn = on;
-    this.button.setAttribute('aria-pressed', String(on));
-    if (instant) {
-      this.platter = { ...this.platter, velocity: on ? RPM_33 : 0 };
-      this.armAngle = this.armTarget();
-      this.render();
-    }
-    if (announce) this.status.textContent = on ? 'Motor on. The record is spinning.' : 'Motor off.';
+  /** Start/Stop button and Space. Ignored mid-swap: the swap drives the motor. */
+  private setMotor(on: boolean) {
+    if (this.swap) return;
+    // Starting again at the run-out cues back to the lead-in.
+    if (on && isEndOfSide(this.progress)) this.progress = 0;
+    this.setMotorState(on);
     this.start();
+  }
+
+  private setMotorState(on: boolean) {
+    if (this.motorOn === on) return;
+    this.motorOn = on;
+    this.motorBtn.setAttribute('aria-pressed', String(on));
+  }
+
+  private endOfSide() {
+    // Reduced motion: no auto-advance to the next record; the motor stops and the arm returns.
+    if (this.reduceMotion.matches) this.setMotorState(false);
+    else this.startSwap();
+  }
+
+  /** Switch record button, and the end of a side. A press during a swap is ignored. */
+  private startSwap() {
+    const { swap, accepted } = requestSwap(this.swap);
+    if (!accepted) return;
+    if (this.reduceMotion.matches) {
+      // No slide: the next record is simply on the platter. The motor state doesn't change.
+      this.loadRecord(nextIndex(this.recordIndex, records.length));
+      this.render();
+      return;
+    }
+    this.dragging = false;
+    this.slideDistance = this.measureSlide();
+    this.swap = swap;
+    this.start();
+  }
+
+  /**
+    One layout read per swap: on the home page the turntable sits on the rug, and the album
+    sleeve covers everything below the rug's bottom edge. Slide until the record's top edge is
+    past it, so the record tucks fully under the sleeve at any layout. Elsewhere, use the default.
+  */
+  private measureSlide(): number {
+    const rug = this.closest('.rug');
+    if (!rug) return SLIDE_DISTANCE;
+    const rec = this.record.getBoundingClientRect();
+    const needed = (rug.getBoundingClientRect().bottom - rec.top) / rec.height;
+    return Math.max(SLIDE_DISTANCE, needed + 0.05);
+  }
+
+  private finishSwapInstantly() {
+    if (!this.swap) return;
+    const { phase } = advanceSwap(this.swap, 0);
+    if (phase === 'stopping' || phase === 'unloading') this.loadRecord(nextIndex(this.recordIndex, records.length));
+    this.swap = null;
+    this.slide = 0;
+    this.render();
+  }
+
+  /** Put record `i` on the platter: new label, back to the lead-in, needle up. */
+  private loadRecord(i: number) {
+    this.labels[this.recordIndex]?.setAttribute('display', 'none');
+    this.labels[this.recordIndex]?.removeAttribute('data-current');
+    this.recordIndex = i;
+    this.labels[i]?.removeAttribute('display');
+    this.labels[i]?.setAttribute('data-current', '');
+    this.platter = { angle: 0, velocity: 0 };
+    this.progress = 0;
+    this.tonearm = { angle: this.tonearm.angle, down: false };
+    const r = records[i]!;
+    this.caption.textContent = `${r.album} · ${r.artist}`;
+    this.status.textContent = `Now playing: ${r.album} by ${r.artist}`;
   }
 
   // ── Pointer: grab, spin, scratch ────────────────────────────────────────
 
   private onPointerDown = (e: PointerEvent) => {
     if (e.pointerType === 'mouse' && e.button !== 0) return;
-    if (this.dragging) return; // ignore a second finger
+    if (this.dragging || this.swap) return; // ignore a second finger, and the record mid-swap
 
     // One layout read per drag. The .record box doesn't rotate, so its rect is stable.
     const rect = this.record.getBoundingClientRect();
@@ -204,7 +344,9 @@ class TurnTable extends HTMLElement {
     if (dx * dx + dy * dy < DEAD_ZONE_PX * DEAD_ZONE_PX) return;
 
     const raw = pointerAngle(this.center.x, this.center.y, e.clientX, e.clientY);
-    this.pointerUnwrapped = unwrap(this.pointerUnwrapped, raw);
+    const next = unwrap(this.pointerUnwrapped, raw);
+    this.pendingDelta += next - this.pointerUnwrapped; // the needle follows the hand, both ways
+    this.pointerUnwrapped = next;
     this.platter = { ...this.platter, angle: normalizeAngle(this.pointerUnwrapped + this.grabOffset) };
 
     const t = e.timeStamp / 1000;
@@ -230,9 +372,12 @@ class TurnTable extends HTMLElement {
   private onKeyDown = (e: KeyboardEvent) => {
     if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
       e.preventDefault();
+      if (this.swap) return;
       const delta = e.key === 'ArrowRight' ? NUDGE_DEG : -NUDGE_DEG;
       this.platter = { ...this.platter, angle: normalizeAngle(this.platter.angle + delta) };
+      this.pendingDelta += delta;
       this.render();
+      this.start();
     } else if (e.key === ' ') {
       e.preventDefault(); // don't scroll the page
       if (!e.repeat) this.setMotor(!this.motorOn);

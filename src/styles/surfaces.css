@@ -21,6 +21,8 @@
     var(--rug-base);
   /* Bound edge of the rug */
   border-bottom: 12px solid var(--rug-binding);
+  /* The lamp glow is wider than the hero; clip it sideways only, so the fringe below still shows. */
+  overflow-x: clip;
   padding-block: clamp(2.5rem, 6vw, 4.5rem) clamp(7rem, 12vw, 9rem);
 }
 
@@ -79,8 +81,11 @@
   margin-top: clamp(-6.5rem, -10vw, -5rem);
 }
 .sleeve-inner {
+  --sleeve-pad: clamp(1.25rem, 4vw, 3.5rem);
+  --sleeve-pad-r: var(--sleeve-pad);
   position: relative;
-  padding: clamp(1.25rem, 4vw, 3.5rem);
+  padding: var(--sleeve-pad);
+  padding-right: var(--sleeve-pad-r);
   background-color: var(--surface);
   border-radius: 10px;
   box-shadow:
@@ -108,4 +113,14 @@
 }
 .sleeve-inner > * {
   position: relative;
+}
+/*
+  Room for the supergraphic ribbon's vertical run (Ribbon.astro): 59px of bands,
+  16px from the sleeve edge, and 2.5rem of air before the content, so a track's record
+  can slide out (24px) without touching the bands.
+*/
+@media (min-width: 900px) {
+  .sleeve-inner--ribbon {
+    --sleeve-pad-r: calc(59px + 16px + 2.5rem);
+  }
 }

@@ -1,0 +1,155 @@
+---
+/*
+  Supergraphic ribbon: four thick bands (orange, mustard, chocolate, olive) that come in from
+  the sleeve's left edge, curve down around the top-right corner, run down the sleeve's right
+  edge beside the content, and curve back out along the bottom. Original CSS, no artwork.
+
+  How it's drawn (all static gradients, no SVG paths to scale):
+    - straight runs: linear-gradient with hard stops
+    - corners: concentric radial-gradient rings in an R × R box, centered on the box's
+      bottom-left (top corner) or top-left (bottom corner), so each ring lines up with a band
+    - the vertical run: a linear-gradient on ::after between the two corners
+  Under 900px there's no gutter for the vertical run, so the bands become straight full-bleed
+  stripes above and below the content.
+
+  The sleeve needs `sleeve-inner--ribbon` so its right padding makes room for the vertical run
+  (surfaces.css; keep its width in sync with T below).
+*/
+interface Props {
+  class?: string;
+}
+const { class: className } = Astro.props;
+
+// Desktop: band, gap, inner corner radius (px). T = total thickness, R = outer corner radius.
+const B = 11;
+const G = 5;
+const RI = 24;
+const T = 4 * B + 3 * G; // 59
+const R = T + RI; // 83
+// Phones: thinner straight stripes.
+const SB = 7;
+const SG = 3;
+const ST = 4 * SB + 3 * SG; // 37
+
+const BANDS = ['var(--band-1)', 'var(--band-2)', 'var(--band-3)', 'var(--band-4)']; // orange → olive
+
+/** Hard-stop stripes for a linear-gradient, in order from the gradient's start. */
+function linearStops(order: string[], b: number, g: number) {
+  let pos = 0;
+  const out: string[] = [];
+  for (const c of order) {
+    out.push(`${c} ${pos}px ${pos + b}px`, `transparent ${pos + b}px ${pos + b + g}px`);
+    pos += b + g;
+  }
+  return out.join(', ');
+}
+
+/** Rings for a radial-gradient, from the inner radius outward, with a 0.6px feather so curves aren't jagged. */
+function ringStops(order: string[], start: number, b: number, g: number, f = 0.6) {
+  let pos = start;
+  const out = [`transparent ${start - f}px`];
+  for (const c of order) {
+    out.push(`${c} ${pos + f}px`, `${c} ${pos + b - f}px`, `transparent ${pos + b + f}px`);
+    pos += b + g;
+  }
+  return out.join(', ');
+}
+
+const inToOut = [...BANDS].reverse(); // olive is the inner ring, orange the outer
+const vars = [
+  `--rb-T: ${T}px`,
+  `--rb-R: ${R}px`,
+  `--rb-ST: ${ST}px`,
+  // top run: orange on top; bottom run: olive on top (the ribbon has turned around)
+  `--rb-run-top: linear-gradient(to bottom, ${linearStops(BANDS, B, G)})`,
+  `--rb-run-bottom: linear-gradient(to bottom, ${linearStops(inToOut, B, G)})`,
+  `--rb-run-sm: linear-gradient(to bottom, ${linearStops(BANDS, SB, SG)})`,
+  // vertical run, left to right: olive (inside of the curve) → orange (outside)
+  `--rb-leg: linear-gradient(to right, ${linearStops(inToOut, B, G)})`,
+  `--rb-corner-top: radial-gradient(circle at 0 100%, ${ringStops(inToOut, RI, B, G)})`,
+  `--rb-corner-bottom: radial-gradient(circle at 0 0, ${ringStops(inToOut, RI, B, G)})`,
+].join('; ');
+---
+
+<div class:list={['ribbon', className]} style={vars}>
+  <div class="band band--top" aria-hidden="true"><span class="run run--top"></span><span class="corner corner--top"></span></div>
+  <div class="ribbon-body"><slot /></div>
+  <div class="band band--bottom" aria-hidden="true"><span class="run run--bottom"></span><span class="corner corner--bottom"></span></div>
+</div>
+
+<style>
+  .ribbon {
+    /* Gap between the vertical run and the sleeve's right edge */
+    --rb-edge: 16px;
+    position: relative;
+  }
+
+  /* Phones and tablets: straight full-bleed stripes */
+  .band {
+    display: flex;
+    margin-inline: calc(-1 * var(--sleeve-pad));
+  }
+  .run {
+    flex: 1;
+    height: var(--rb-ST);
+    background: var(--rb-run-sm);
+  }
+  .corner {
+    display: none;
+  }
+  .band--top {
+    margin-bottom: var(--space-5);
+  }
+  .band--bottom {
+    margin-top: var(--space-5);
+  }
+
+  @media (min-width: 900px) {
+    .band {
+      height: var(--rb-R);
+      /* Left: bleed off the sleeve edge. Right: stop where the vertical run sits. */
+      margin-left: calc(-1 * var(--sleeve-pad));
+      margin-right: calc(var(--rb-edge) - var(--sleeve-pad-r));
+    }
+    .run {
+      height: var(--rb-T);
+    }
+    .run--top {
+      align-self: flex-start;
+      background: var(--rb-run-top);
+    }
+    .run--bottom {
+      align-self: flex-end;
+      background: var(--rb-run-bottom);
+    }
+    .corner {
+      display: block;
+      flex: none;
+      width: var(--rb-R);
+      height: var(--rb-R);
+    }
+    .corner--top {
+      background: var(--rb-corner-top);
+    }
+    .corner--bottom {
+      background: var(--rb-corner-bottom);
+    }
+    .band--top {
+      margin-bottom: var(--space-3);
+    }
+    .band--bottom {
+      margin-top: var(--space-3);
+    }
+    /* The vertical run, from the bottom of the top corner to the top of the bottom corner */
+    .ribbon::after {
+      content: '';
+      position: absolute;
+      top: var(--rb-R);
+      bottom: var(--rb-R);
+      right: calc(var(--rb-edge) - var(--sleeve-pad-r));
+      width: var(--rb-T);
+      background: var(--rb-leg);
+      pointer-events: none;
+    }
+  }
+</style>

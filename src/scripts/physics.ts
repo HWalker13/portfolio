@@ -34,6 +34,8 @@ export interface PlatterState {
   angle: number;
   /** Angular velocity in °/s. Positive is clockwise on screen. */
   velocity: number;
+  /** How far the record turned in the last step, unwrapped (°). Drives the needle. */
+  delta?: number;
 }
 
 export interface PointerSample {
@@ -104,8 +106,9 @@ export function stepPlatter(
   let velocity = approach(state.velocity, targetVelocity(motorOn), k, dt);
   if (!motorOn && Math.abs(velocity) < p.restEpsilon) velocity = 0;
   // Use the average of old and new velocity so the angle matches the velocity curve closely.
-  const angle = stepAngle(state.angle, (state.velocity + velocity) / 2, dt);
-  return { angle, velocity };
+  const delta = ((state.velocity + velocity) / 2) * dt;
+  const angle = normalizeAngle(state.angle + delta);
+  return { angle, velocity, delta };
 }
 
 /** True when the platter is fully at rest and the animation loop can sleep. */
@@ -145,16 +148,174 @@ export function releaseVelocity(
   return clampVelocity((last.angle - first.angle) / span, p.maxVelocity);
 }
 
-/** Tonearm angle: rests at `restAngle`, swings to `playAngle` when the motor is on. */
-export function stepArm(
-  armAngle: number,
-  motorOn: boolean,
-  restAngle: number,
-  playAngle: number,
-  rawDt: number,
-  p: Params = PARAMS,
-): number {
-  const target = motorOn ? playAngle : restAngle;
+/** Ease the tonearm toward a target angle; snaps when it's within 0.05°. */
+export function stepArm(armAngle: number, target: number, rawDt: number, p: Params = PARAMS): number {
   const next = approach(armAngle, target, p.armK, clampDt(rawDt, p.maxDt));
   return Math.abs(next - target) < 0.05 ? target : next;
+}
+
+/* ── The needle: rotation → progress through the side → groove radius → arm angle ───────── */
+
+/**
+  A side is about 30 rotations: 30 × 1.8 s = 54 s if left alone. Real sides run ~20 minutes;
+  this is compressed so a visitor actually sees the needle travel and the record change.
+*/
+export const SIDE_ROTATIONS = 30;
+export const SIDE_DEGREES = SIDE_ROTATIONS * 360;
+
+/**
+  Turntable geometry, in the SVG's 500 × 400 plinth units.
+  `stylus` is the stylus tip relative to the pivot when the arm is at 0° (resting).
+*/
+export const ARM_GEOMETRY = {
+  pivot: { x: 430, y: 70 },
+  center: { x: 200, y: 200 },
+  stylus: { x: -8, y: 236 },
+  /** Outermost groove (lead-in) and innermost (run-out), as radii from the record center */
+  leadIn: 152,
+  runOut: 86,
+} as const;
+export type ArmGeometry = typeof ARM_GEOMETRY;
+
+/** Where the stylus tip is when the arm is rotated `deg` clockwise (screen coordinates). */
+export function stylusPosition(deg: number, g: ArmGeometry = ARM_GEOMETRY) {
+  const t = (deg * Math.PI) / 180;
+  const { x, y } = g.stylus;
+  return { x: g.pivot.x + x * Math.cos(t) - y * Math.sin(t), y: g.pivot.y + x * Math.sin(t) + y * Math.cos(t) };
+}
+
+/**
+  The arm angle that puts the stylus at distance `r` from the record center.
+  Pivot, record center and stylus form a triangle with two known sides (pivot→center,
+  pivot→stylus) and the third side = r. The law of cosines gives the angle at the pivot;
+  of the two solutions, the smaller one is the arm swinging in over the record.
+*/
+export function armAngleForRadius(r: number, g: ArmGeometry = ARM_GEOMETRY): number {
+  const dx = g.pivot.x - g.center.x;
+  const dy = g.pivot.y - g.center.y;
+  const D = Math.hypot(dx, dy);
+  const L = Math.hypot(g.stylus.x, g.stylus.y);
+  const cosPhi = Math.max(-1, Math.min(1, (r * r - D * D - L * L) / (2 * D * L)));
+  const t = Math.atan2(dy, dx) + Math.acos(cosPhi) - Math.atan2(g.stylus.y, g.stylus.x);
+  const deg = (t * 180) / Math.PI;
+  return ((deg % 360) + 540) % 360 - 180;
+}
+
+/** Grooves are evenly spaced, so radius falls linearly as the side plays. */
+export function needleRadius(progress: number, g: ArmGeometry = ARM_GEOMETRY): number {
+  const p = Math.max(0, Math.min(1, progress));
+  return g.leadIn - p * (g.leadIn - g.runOut);
+}
+
+/** Arm angle for a given progress through the side (0 = lead-in, 1 = run-out). */
+export function needleAngle(progress: number, g: ArmGeometry = ARM_GEOMETRY): number {
+  return armAngleForRadius(needleRadius(progress, g), g);
+}
+
+/**
+  Advance progress by how far the record turned. Forward spins move the needle in,
+  a backwards scratch moves it back out. With the needle up (motor stopped, or mid-swap),
+  turning the record by hand doesn't move it.
+*/
+export function stepProgress(progress: number, deltaDeg: number, needleDown: boolean): number {
+  if (!needleDown || !Number.isFinite(deltaDeg)) return progress;
+  return Math.max(0, Math.min(1, progress + deltaDeg / SIDE_DEGREES));
+}
+
+/** The needle has reached the run-out groove. */
+export function isEndOfSide(progress: number): boolean {
+  return progress >= 1;
+}
+
+export interface Tonearm {
+  angle: number;
+  /** In the groove. While down, the arm angle is exactly needleAngle(progress). */
+  down: boolean;
+}
+
+/**
+  Motor on: swing toward the groove and drop into it once there (cueing).
+  Down: ride the groove exactly. Motor off: lift and swing back to rest.
+*/
+export function stepTonearm(arm: Tonearm, motorOn: boolean, progress: number, rawDt: number, restAngle = 0): Tonearm {
+  if (!motorOn) return { angle: stepArm(arm.angle, restAngle, rawDt), down: false };
+  const groove = needleAngle(progress);
+  if (arm.down) return { angle: groove, down: true };
+  const angle = stepArm(arm.angle, groove, rawDt);
+  return { angle, down: Math.abs(angle - groove) < 0.3 };
+}
+
+/* ── The queue and the record swap ───────────────────────────────────────────────────────── */
+
+/** Next record in the queue, looping back to the first after the last. */
+export function nextIndex(index: number, length: number): number {
+  return length > 0 ? (index + 1) % length : 0;
+}
+
+/**
+  The swap, in seconds (3.0 total): the motor winds down and the arm returns, the record slides
+  off into the sleeve, the next one slides out of it, then the motor spins up and the arm cues.
+*/
+export const SWAP_PHASES = [
+  { phase: 'stopping', duration: 0.8 },
+  { phase: 'unloading', duration: 0.6 },
+  { phase: 'loading', duration: 0.6 },
+  { phase: 'starting', duration: 1.0 },
+] as const;
+export type SwapPhase = (typeof SWAP_PHASES)[number]['phase'];
+export const SWAP_DURATION = SWAP_PHASES.reduce((t, p) => t + p.duration, 0);
+
+/**
+  Default slide distance, in record heights. On the home page the turntable measures the real
+  distance to the rug's bottom edge once per swap (the sleeve covers everything below it).
+*/
+export const SLIDE_DISTANCE = 1.9;
+
+/** null = no swap running. Elapsed is simulated time, so a hidden tab pauses the swap. */
+export type Swap = { elapsed: number } | null;
+
+/** Start a swap, unless one is already running (then the press is ignored). */
+export function requestSwap(swap: Swap): { swap: Swap; accepted: boolean } {
+  if (swap) return { swap, accepted: false };
+  return { swap: { elapsed: 0 }, accepted: true };
+}
+
+/** Which phase a swap is in, and how far through it (0–1). */
+export function swapPhaseAt(elapsed: number): { phase: SwapPhase; t: number } {
+  let start = 0;
+  for (const p of SWAP_PHASES) {
+    if (elapsed < start + p.duration) return { phase: p.phase, t: (elapsed - start) / p.duration };
+    start += p.duration;
+  }
+  return { phase: 'starting', t: 1 };
+}
+
+/**
+  Advance a running swap. `changeRecord` is true on exactly one step: the one that crosses into
+  'loading', when the record is out of sight and the label can change.
+*/
+export function advanceSwap(
+  swap: Swap,
+  rawDt: number,
+  p: Params = PARAMS,
+): { swap: Swap; phase: SwapPhase | null; t: number; changeRecord: boolean; done: boolean } {
+  if (!swap) return { swap: null, phase: null, t: 0, changeRecord: false, done: false };
+  const before = swapPhaseAt(swap.elapsed).phase;
+  const elapsed = swap.elapsed + clampDt(rawDt, p.maxDt);
+  if (elapsed >= SWAP_DURATION) {
+    return { swap: null, phase: null, t: 1, changeRecord: before !== 'loading' && before !== 'starting', done: true };
+  }
+  const { phase, t } = swapPhaseAt(elapsed);
+  const changeRecord = phase === 'loading' && before !== 'loading';
+  return { swap: { elapsed }, phase, t, changeRecord, done: false };
+}
+
+const easeIn = (t: number) => t * t * t;
+const easeOut = (t: number) => 1 - (1 - t) ** 3;
+
+/** Record offset (in record heights) for a swap phase: out on 'unloading', back on 'loading'. */
+export function recordSlide(phase: SwapPhase | null, t: number, distance = SLIDE_DISTANCE): number {
+  if (phase === 'unloading') return distance * easeIn(t);
+  if (phase === 'loading') return distance * (1 - easeOut(t));
+  return 0;
 }
