@@ -1,0 +1,57 @@
+---
+/*
+  A small vinyl record pinned to the Let's talk board, showing the label of whichever record is
+  on the turntable right now. Same label renderer as the turntable (RecordLabels.astro); the
+  turntable fires a `turntable:record` event on every swap and this follows it.
+  Decorative (aria-hidden): the turntable's own caption and live region announce the record.
+*/
+import RecordLabels from './RecordLabels.astro';
+const grooves = Array.from({ length: 14 }, (_, i) => 52 + i * 3.2);
+---
+
+<div class="pinned-record" data-pinned-record>
+  <svg viewBox="-100 -100 200 200" aria-hidden="true" focusable="false">
+    <circle r="98" fill="#141110"></circle>
+    <g fill="none" stroke="#2c2622" stroke-width="0.9">
+      {grooves.map((r) => <circle r={r} />)}
+    </g>
+    <!-- Two fixed glints, like light falling across the grooves -->
+    <path d="M -64 -74 A 98 98 0 0 1 -8 -97 L -4 -60 A 60 60 0 0 0 -40 -46 Z" fill="#ffffff" fill-opacity="0.07"></path>
+    <path d="M 64 74 A 98 98 0 0 1 8 97 L 4 60 A 60 60 0 0 0 40 46 Z" fill="#ffffff" fill-opacity="0.05"></path>
+    <g transform="scale(0.64)">
+      <RecordLabels uid="pinned" />
+    </g>
+    <circle r="2.6" fill="#1e140d"></circle>
+  </svg>
+</div>
+
+<script>
+  const pinned = document.querySelector<HTMLElement>('[data-pinned-record]');
+  if (pinned) {
+    const labels = [...pinned.querySelectorAll<SVGGElement>('[data-record]')];
+    document.addEventListener('turntable:record', (e) => {
+      const index = (e as CustomEvent<{ index: number }>).detail.index;
+      labels.forEach((g, i) => {
+        if (i === index) {
+          g.removeAttribute('display');
+          g.setAttribute('data-current', '');
+        } else {
+          g.setAttribute('display', 'none');
+          g.removeAttribute('data-current');
+        }
+      });
+    });
+  }
+</script>
+
+<style>
+  .pinned-record {
+    width: 100%;
+    aspect-ratio: 1;
+    border-radius: 50%;
+  }
+  svg {
+    width: 100%;
+    height: 100%;
+  }
+</style>

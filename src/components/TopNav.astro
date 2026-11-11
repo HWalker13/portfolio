@@ -1,0 +1,101 @@
+---
+/*
+  Top nav on the orange stage: name with a tiny-record monogram on the left,
+  "Projects" and a "Let's talk" pill on the right. Not sticky: it would cover the reel.
+*/
+import { site } from '../data/site';
+---
+
+<nav class="topnav container" aria-label="Site">
+  <a class="brand" href="/">
+    <span class="mono" aria-hidden="true">HA</span>
+    <span>{site.name}</span>
+  </a>
+  <ul>
+    <li><a class="plain" href="/#projects">Projects</a></li>
+    <li><a class="talk" href="/#contact">Let's talk</a></li>
+  </ul>
+</nav>
+
+<style>
+  .topnav {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-2) var(--space-4);
+    padding-block: var(--space-3);
+  }
+  a {
+    color: var(--hero-text);
+  }
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    min-height: 44px;
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: var(--step-1);
+    text-decoration: none;
+  }
+  /* A tiny record: grooves, a cream label, the initials on it */
+  .mono {
+    display: grid;
+    place-items: center;
+    width: 2.2rem;
+    height: 2.2rem;
+    border-radius: 50%;
+    background:
+      radial-gradient(circle, var(--cream) 0 44%, transparent 45%),
+      repeating-radial-gradient(circle, #141110 0 1px, #2b2420 1px 2px);
+    color: var(--chocolate);
+    font-size: 0.62rem;
+    font-weight: 900;
+    letter-spacing: 0.02em;
+  }
+  ul {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-2) var(--space-4);
+  }
+  .plain {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    font-weight: 700;
+    text-decoration-thickness: 0.1em;
+  }
+  .talk {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.4em 1.1em;
+    border-radius: 999px;
+    background: var(--pill-bg);
+    color: var(--pill-text);
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 3px 0 var(--pill-accent);
+  }
+  .talk:hover {
+    background: var(--pill-bg-hover);
+    color: var(--pill-text);
+  }
+  /* 320px: drop the name text but keep the monogram so everything fits on one row */
+  @media (max-width: 359px) {
+    .brand span:not(.mono) {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+    }
+  }
+</style>

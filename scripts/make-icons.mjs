@@ -1,7 +1,7 @@
 /*
   Raster icons from public/favicon.svg (the SVG itself is what modern browsers use):
     public/favicon.ico          16, 32, 48 px (for clients that still ask for /favicon.ico)
-    public/apple-touch-icon.png 180 px, record on the rug green (iOS fills transparency with black)
+    public/apple-touch-icon.png 180 px, record on the hero's burnt orange (iOS fills transparency with black)
   Run: npm run icons
 */
 import sharp from 'sharp';
@@ -33,7 +33,7 @@ images.forEach((img, i) => {
 writeFileSync('public/favicon.ico', Buffer.concat([header, ...images]));
 
 const record = await sharp(svg, { density: 72 * (140 / 32) * 2 }).resize(140, 140).png().toBuffer();
-await sharp({ create: { width: 180, height: 180, channels: 4, background: '#2f4a23' } })
+await sharp({ create: { width: 180, height: 180, channels: 4, background: '#d9622b' } })
   .composite([{ input: record, left: 20, top: 20 }])
   .png()
   .toFile('public/apple-touch-icon.png');

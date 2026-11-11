@@ -54,9 +54,9 @@ const personLd = {
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 
-    <!-- Browser chrome matches the top of the rug -->
-    <meta name="theme-color" content="#1f3016" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#111a0c" media="(prefers-color-scheme: dark)" />
+    <!-- Browser chrome matches the orange stage at the top of every page -->
+    <meta name="theme-color" content="#d9622b" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#8f3a16" media="(prefers-color-scheme: dark)" />
 
     <!-- Social previews (LinkedIn, Slack, iMessage, X) -->
     <meta property="og:type" content={ogType} />
@@ -75,8 +75,18 @@ const personLd = {
 
     {person && <script type="application/ld+json" set:html={JSON.stringify(personLd)} />}
 
-    <!-- The display face renders the name in the hero (the likely LCP element), so fetch it early. -->
+    <!-- The display face renders the hero name, so fetch it early. (Measured: dropping this preload
+         moved mobile FCP from 2.0s to 2.7s in Lighthouse.) -->
     <link rel="preload" href={frauncesLatin} as="font" type="font/woff2" crossorigin />
+    <!--
+      "Pause motion" (the hero's toggle) is remembered per visitor. Read it before first paint so a
+      paused marquee never starts moving. Storage can throw (private mode, blocked site data).
+    -->
+    <script is:inline>
+      try {
+        if (localStorage.getItem('motion') === 'paused') document.documentElement.dataset.motion = 'paused';
+      } catch {}
+    </script>
     <slot name="head" />
   </head>
   <body>

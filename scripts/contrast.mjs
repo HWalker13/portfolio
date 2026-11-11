@@ -3,14 +3,11 @@
   Colors are read straight from src/styles/tokens.css (light :root, then the dark-mode
   override), so this script can't drift from the CSS.
 
-  Rug pairs are checked against the brightest pixel actually in the rug tile, after the
-  minimum scrim is composited over it. That's the worst spot any hero text can land on.
+  Grain never sits behind text (see tokens.css), so every pair here is ink on a clean color.
 
   Run: npm run contrast   (exits 1 if any pair misses its requirement)
 */
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
-import sharp from 'sharp';
 
 const BODY = 4.5; // AA normal text
 const UI = 3; // AA non-text (focus rings, control boundaries)
@@ -45,20 +42,6 @@ const ratio = (a, b) => {
   const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
   return (x + 0.05) / (y + 0.05);
 };
-/** CSS alpha compositing (sRGB space, which is what browsers do). */
-const over = (top, alpha, bottom) => top.map((c, i) => c * alpha + bottom[i] * (1 - alpha));
-
-async function brightestPixel(path) {
-  const { data, info } = await sharp(path).raw().toBuffer({ resolveWithObject: true });
-  let best = [0, 0, 0];
-  let bestL = -1;
-  for (let i = 0; i < data.length; i += info.channels) {
-    const px = [data[i], data[i + 1], data[i + 2]];
-    const L = lum(px);
-    if (L > bestL) [best, bestL] = [px, L];
-  }
-  return best;
-}
 
 // ── Checks ───────────────────────────────────────────────────────────────
 const rows = [];
@@ -72,6 +55,7 @@ const check = (label, fg, bg, need) => {
 for (const [mode, t] of [['light', light], ['dark', dark]]) {
   const c = (name) => toRgb(resolve(t, name));
 
+  // Page text on cream / paper (tracklist sleeve, About, liner notes)
   for (const fg of ['--text', '--text-muted', '--link']) {
     for (const bg of ['--bg', '--surface']) check(`${mode}: ${fg} on ${bg}`, c(fg), c(bg), BODY);
   }
@@ -80,44 +64,50 @@ for (const [mode, t] of [['light', light], ['dark', dark]]) {
       for (const bg of ['--bg', '--surface']) check(`${mode}: ${fg} on ${bg}`, c(fg), c(bg), BODY);
     }
   }
+  check(`${mode}: focus ring on --bg`, c('--focus'), c('--bg'), UI);
 
-  // Stat numbers sit on color-mix(in srgb, mustard 28%, transparent) over the sleeve surface.
-  check(`${mode}: --text on stat chip (28% mustard over --surface)`, c('--text'), over(c('--mustard'), 0.28, c('--surface')), BODY);
-  // Track cards are --bg panels on the sleeve; their chips sit on --bg.
-  check(`${mode}: --text on stat chip (28% mustard over --bg)`, c('--text'), over(c('--mustard'), 0.28, c('--bg')), BODY);
-
-  // Now playing caption: a paper tag under the turntable, the same in both themes.
-  check(`${mode}: now playing caption (--pill-text on --pill-bg)`, c('--pill-text'), c('--pill-bg'), BODY);
-  check(`${mode}: "Now playing:" key (--now-playing-key on --pill-bg)`, c('--now-playing-key'), c('--pill-bg'), BODY);
-
-  // Pills (hero links) are solid, so they don't depend on the rug.
+  // Hero / orange stage (and the top nav on it)
+  check(`${mode}: hero text on --hero-bg`, c('--hero-text'), c('--hero-bg'), BODY);
+  check(`${mode}: hero text where the marquee passes behind it`, c('--hero-text'), c('--hero-marquee'), BODY);
+  check(`${mode}: hero name fill against its --headline-keyline`, c('--headline-fill'), c('--headline-keyline'), BODY);
+  check(`${mode}: hero focus ring on --hero-bg`, c('--hero-focus'), c('--hero-bg'), UI);
+  check(`${mode}: "Pause motion" pressed (--hero-bg text on --hero-text)`, c('--hero-bg'), c('--hero-text'), BODY);
   check(`${mode}: --pill-text on --pill-bg`, c('--pill-text'), c('--pill-bg'), BODY);
   check(`${mode}: --pill-text on --pill-bg-hover`, c('--pill-text'), c('--pill-bg-hover'), BODY);
+  // Now playing caption: a paper tag under the turntable, the same in both themes.
+  check(`${mode}: "Now playing:" key (--now-playing-key on --pill-bg)`, c('--now-playing-key'), c('--pill-bg'), BODY);
 
-  // Rug: worst case = brightest tile pixel under the lightest part of the scrim.
-  const tile = resolve(t, '--rug-image').match(/url\(['"]?\/?([^'")]+)['"]?\)/)[1];
-  const bright = await brightestPixel(fileURLToPath(new URL(`../public/${tile}`, import.meta.url)));
-  const scrim = resolve(t, '--rug-scrim').split(/\s+/).map(Number);
-  const alpha = Number(resolve(t, '--rug-scrim-min'));
-  const worst = over(scrim, alpha, bright);
-  rows.push(`      ${mode} rug: brightest tile pixel ${toHex(bright)} under ${alpha} scrim → ${toHex(worst)}`);
-  check(`${mode}: --on-rug on rug (worst pixel)`, c('--on-rug'), worst, BODY);
-  check(`${mode}: --on-rug-muted on rug (worst pixel)`, c('--on-rug-muted'), worst, BODY);
-  check(`${mode}: --focus-on-rug ring on rug (worst pixel)`, c('--focus-on-rug'), worst, UI);
+  // Projects reel
+  for (const fg of ['--reel-text', '--reel-muted', '--reel-accent']) check(`${mode}: reel ${fg} on --reel-bg`, c(fg), c('--reel-bg'), BODY);
+  check(`${mode}: reel focus ring on --reel-bg`, c('--reel-focus'), c('--reel-bg'), UI);
+  check(`${mode}: reel step button border on --reel-bg`, c('--reel-muted'), c('--reel-bg'), UI);
+  check(`${mode}: reel step button hover (chocolate on --reel-accent)`, c('--chocolate'), c('--reel-accent'), BODY);
 
-  // Lamp glow: the most glow allowed behind hero text, on top of the worst rug pixel.
-  const lamp = resolve(t, '--lamp').split(/\s+/).map(Number);
-  const lampMax = Number(resolve(t, '--lamp-on-text-max'));
-  const lit = over(lamp, lampMax, worst);
-  rows.push(`      ${mode} rug + lamp: ${lampMax} amber glow over the worst pixel → ${toHex(lit)}`);
-  check(`${mode}: --on-rug on lamp-lit rug`, c('--on-rug'), lit, BODY);
-  check(`${mode}: --on-rug-muted on lamp-lit rug`, c('--on-rug-muted'), lit, BODY);
-  check(`${mode}: --focus-on-rug ring on lamp-lit rug`, c('--focus-on-rug'), lit, UI);
+  // Footer strip
+  for (const fg of ['--colophon-text', '--colophon-muted', '--mustard']) check(`${mode}: footer ${fg} on --colophon-bg`, c(fg), c('--colophon-bg'), BODY);
 
-  // Hero name: the cream letter edge touches the chocolate keyline (orange/mustard sit behind it).
-  check(`${mode}: --on-rug letters against --headline-keyline`, c('--on-rug'), c('--headline-keyline'), BODY);
-  check(`${mode}: --pill-bg edge on rug (worst pixel)`, c('--pill-bg'), worst, UI);
+  // Let's talk: cream title and subline on the plain-chocolate patch under them
+  check(`${mode}: Let's talk text on --wallpaper-bg`, c('--talk-text'), c('--wallpaper-bg'), BODY);
+  check(`${mode}: board focus halo (cream) on cork`, c('--cream'), c('--cork-bg'), UI);
 }
+
+// Let's talk type sits straight on the wallpaper: check cream against every wallpaper ink.
+const svgInks = (file) => [...new Set(readFileSync(new URL(`../public/textures/${file}`, import.meta.url), 'utf8').match(/#[0-9A-Fa-f]{6}/g))];
+for (const [file, tok] of [['flowers.svg', light], ['flowers-dark.svg', dark]]) {
+  for (const ink of svgInks(file)) check(`Let's talk cream on wallpaper ink (${file})`, toRgb(resolve(tok, '--talk-text')), toRgb(ink), BODY);
+}
+
+// Theme-independent surfaces: demo placeholders, board items, poster inks
+const T = (n) => toRgb(resolve(light, n));
+for (const bg of ['--burnt-orange', '--mustard', '--powder', '--cream']) check(`demo placeholder: deep brown on ${bg}`, T('--deep-brown'), T(bg), BODY);
+check('video Play button: chocolate on paper', T('--chocolate'), T('--paper'), BODY);
+check('board item ink on paper (note, index card, polaroid, resume)', T('--item-ink'), T('--paper'), BODY);
+check('board item ink over a note rule line (powder)', T('--item-ink'), T('--note-rule'), BODY);
+check('ticket stub ink on --ticket-bg', T('--item-ink'), T('--ticket-bg'), BODY);
+check('LinkedIn "in" mark (slate ink) on paper', T('--slate-ink'), T('--paper'), BODY);
+// Poster: every word is chocolate on a solid cream tag, banner or band (the art is never behind text)
+check('poster: chocolate on its cream tag, banner and band', T('--chocolate'), T('--cream'), BODY);
+check('board focus ring (deep brown) inside its cream halo', T('--deep-brown'), T('--cream'), UI);
 
 // Record labels: title/artist ink on each label's background (src/data/records.json).
 const records = JSON.parse(readFileSync(new URL('../src/data/records.json', import.meta.url), 'utf8'));
@@ -135,15 +125,16 @@ console.log(rows.join('\n'));
 const l = (n) => toRgb(resolve(light, n));
 const d = (n) => toRgb(resolve(dark, n));
 const info = [
-  ['light: --burnt-orange on --bg', l('--burnt-orange'), l('--bg')],
+  ['light: --burnt-orange on --bg (text uses --orange-ink instead)', l('--burnt-orange'), l('--bg')],
   ['light: --mustard on --bg', l('--mustard'), l('--bg')],
   ['light: --avocado on --bg', l('--avocado'), l('--bg')],
-  ['light: --rug-base on --bg', l('--rug-base'), l('--bg')],
-  ['light: --rug-fiber on --bg', l('--rug-fiber'), l('--bg')],
-  ['light: --rug-fiber-light on --bg', l('--rug-fiber-light'), l('--bg')],
+  ['--slate on cream (why the LinkedIn mark uses --slate-ink)', l('--slate'), l('--cream')],
+  ['--slate on chocolate', l('--slate'), l('--chocolate')],
+  ['wallpaper flowers: muted cream (#76604A) on chocolate (pattern, never text)', toRgb('#76604a'), l('--chocolate')],
   ['dark: light-mode --orange-ink on --bg', l('--orange-ink'), d('--bg')],
-  ['rug: dark-mode link orange on --rug-base (why rug links are pills)', d('--link'), l('--rug-base')],
   ['hero name: cream directly on orange, without the keyline', l('--cream'), l('--burnt-orange')],
+  ['orange on chocolate (why reel links are cream with an orange underline)', l('--burnt-orange'), l('--chocolate')],
+  ['poster ink: orange plate on cream (art only)', l('--poster-orange'), l('--cream')],
 ];
 console.log('\nDecorative only, never used as text:');
 for (const [label, fg, bg] of info) console.log(`  ----  ${ratio(fg, bg).toFixed(2).padStart(5)}:1  ${label}`);

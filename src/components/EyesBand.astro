@@ -1,0 +1,166 @@
+---
+/*
+  Eyes band: a half-drop repeat of hand-inked 1960s pop-art eyes on a red-orange strip, like a
+  printed textile. Five original designs, cycled. Decorative: aria-hidden.
+
+  The art and the layout live in src/scripts/eye-art.ts (plain data, tested in eyes.test.ts).
+  Each design is drawn ONCE, as symbols in a hidden sprite; every eye on the strip is a few
+  <use> references to them, so the pattern costs little DOM. Each breakpoint has its own grid
+  (phone, mid, desktop), scaled so the same number of rows shows at every width; positions are
+  percentages of a strip that keeps its aspect ratio, and the pattern bleeds off every edge.
+
+  Per eye, bottom to top: lid color / petals, the white, the iris layer (`.look`, clipped to the
+  eye opening; src/scripts/eyes.ts slides it toward the cursor, under the lids), the lid's shadow
+  on the eyeball, the blink lid, then the ink.
+*/
+import { ART, DESIGNS, EX, EY, INK, OPENING_PATH, PATTERNS, SHADE, VB } from '../scripts/eye-art';
+
+const layouts = PATTERNS.map(({ L, placed }) => ({
+  key: L.key,
+  aspect: `${L.W} / ${L.H}`,
+  eyes: placed.map((p) => {
+    const h = p.w * (VB.h / VB.w);
+    return {
+      design: p.design,
+      style: [
+        `left:${(((p.cx - p.w / 2) / L.W) * 100).toFixed(2)}%`,
+        `top:${(((p.cy - h / 2) / L.H) * 100).toFixed(2)}%`,
+        `width:${((p.w / L.W) * 100).toFixed(2)}%`,
+        `rotate:${p.rot.toFixed(1)}deg`,
+      ].join(';'),
+    };
+  }),
+}));
+const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
+---
+
+<div class="eyes-band" aria-hidden="true" data-eyes>
+  <span class="grain"></span>
+
+  <!-- The sprite: each design's layers, drawn once -->
+  <svg class="sprite" width="0" height="0" focusable="false">
+    <defs>
+      <clipPath id="eye-opening"><path d={OPENING_PATH}></path></clipPath>
+      {
+        DESIGNS.map((d) => (
+          <>
+            <symbol id={`eye-${d}-behind`} viewBox={vb} overflow="visible" set:html={ART[d].behind} />
+            <symbol id={`eye-${d}-iris`} viewBox={vb} overflow="visible" set:html={ART[d].iris} />
+            <symbol id={`eye-${d}-front`} viewBox={vb} overflow="visible" set:html={ART[d].front} />
+          </>
+        ))
+      }
+      <symbol id="eye-shade" viewBox={vb} overflow="visible" set:html={SHADE} />
+    </defs>
+  </svg>
+
+  {
+    layouts.map((L) => (
+      <div class:list={['eyes', `eyes--${L.key}`]} style={`aspect-ratio:${L.aspect}`}>
+        {L.eyes.map((e) => (
+          <svg class="eye" viewBox={vb} style={e.style} data-eye={e.design}>
+            <use href={`#eye-${e.design}-behind`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
+            <path d={OPENING_PATH} fill={INK.white} />
+            <g clip-path="url(#eye-opening)">
+              <g class="look">
+                <use href={`#eye-${e.design}-iris`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
+              </g>
+              <use href="#eye-shade" x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
+              <rect class="lid" x={EX - 80} y={EY - 50} width="160" height="100" />
+            </g>
+            <use href={`#eye-${e.design}-front`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
+          </svg>
+        ))}
+      </div>
+    ))
+  }
+</div>
+
+<script>
+  import { startEyes } from '../scripts/eyes';
+  startEyes();
+</script>
+
+<style>
+  .eyes-band {
+    position: relative;
+    overflow: hidden;
+    background: var(--eyes-bg);
+  }
+  .sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+  /* One layout per breakpoint; the strip keeps that layout's aspect ratio */
+  .eyes {
+    position: relative;
+    display: none;
+  }
+  .eyes--p {
+    display: block;
+  }
+  @media (min-width: 560px) {
+    .eyes--p {
+      display: none;
+    }
+    .eyes--m {
+      display: block;
+    }
+  }
+  @media (min-width: 900px) {
+    .eyes--m {
+      display: none;
+    }
+    .eyes--d {
+      display: block;
+    }
+  }
+  /*
+    The desktop pattern is generated 1.4× wider than it shows (eye-art.ts), and centered, so the
+    band (overflow: hidden) crops it. Up to 1440px it scales with the screen; past that the strip
+    keeps its height and simply shows more of the pattern, edge to edge, up to a 2016px screen.
+  */
+  @media (min-width: 900px) {
+    .eyes--d {
+      width: 140%;
+      margin-left: -20%;
+    }
+  }
+  @media (min-width: 1441px) {
+    .eyes--d {
+      width: 2016px;
+      margin-left: calc(50% - 1008px);
+    }
+  }
+  .eye {
+    position: absolute;
+    height: auto;
+    overflow: visible;
+    transform-origin: 50% 50%;
+  }
+  .look {
+    will-change: transform;
+  }
+  /* Blink: an eyelid the color of the band drops from the top and lifts again */
+  .lid {
+    fill: var(--eyes-bg);
+    transform-box: fill-box;
+    transform-origin: 50% 0;
+    transform: scaleY(0);
+  }
+  .eye.blink .lid {
+    animation: blink 180ms ease-in-out;
+  }
+  @keyframes blink {
+    50% {
+      transform: scaleY(1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .eye.blink .lid {
+      animation: none;
+    }
+  }
+</style>

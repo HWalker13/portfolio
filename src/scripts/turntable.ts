@@ -279,15 +279,16 @@ class TurnTable extends HTMLElement {
   }
 
   /**
-    One layout read per swap: on the home page the turntable sits on the rug, and the album
-    sleeve covers everything below the rug's bottom edge. Slide until the record's top edge is
-    past it, so the record tucks fully under the sleeve at any layout. Elsewhere, use the default.
+    One layout read per swap: on the home page the turntable sits on the orange stage, and the
+    album sleeve covers everything below the stage's bottom edge ([data-swap-edge]). Slide until
+    the record's top edge is past it, so the record tucks fully under the sleeve at any layout.
+    Elsewhere, use the default.
   */
   private measureSlide(): number {
-    const rug = this.closest('.rug');
-    if (!rug) return SLIDE_DISTANCE;
+    const edge = this.closest('[data-swap-edge]');
+    if (!edge) return SLIDE_DISTANCE;
     const rec = this.record.getBoundingClientRect();
-    const needed = (rug.getBoundingClientRect().bottom - rec.top) / rec.height;
+    const needed = (edge.getBoundingClientRect().bottom - rec.top) / rec.height;
     return Math.max(SLIDE_DISTANCE, needed + 0.05);
   }
 
@@ -313,6 +314,8 @@ class TurnTable extends HTMLElement {
     const r = records[i]!;
     this.caption.textContent = `${r.album} · ${r.artist}`;
     this.status.textContent = `Now playing: ${r.album} by ${r.artist}`;
+    // Anything else showing the current record (the record pinned on the Let's talk board) follows this.
+    document.dispatchEvent(new CustomEvent('turntable:record', { detail: { index: i } }));
   }
 
   // ── Pointer: grab, spin, scratch ────────────────────────────────────────

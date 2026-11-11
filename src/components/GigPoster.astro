@@ -1,0 +1,153 @@
+---
+/*
+  The corkboard's centerpiece: an original 1970s-style illustrated space-scene gig poster.
+  A big orange brain planet (figuring things out) and a little rocket launching toward it out of
+  the clouds (shipping). The art is one static SVG, public/textures/poster-space.svg, written by
+  scripts/make-poster-art.mjs; nothing here is live or animated.
+
+  Text is real HTML on solid cream, so every line passes contrast whatever the art does behind it:
+    - "NOW BOOKING" tag at the top
+    - "HOLDEN ANDERSON" in the wavy lettering on a curvy cream ribbon banner
+    - "STARTING JUNE 2027 · Backend · Infrastructure · AI engineering" on a cream band
+  The riso grain is the site's shared grain layer. Poster inks are poster-only (CLAUDE.md).
+*/
+import WavyTitle from './WavyTitle.astro';
+---
+
+<div class="poster">
+  <img class="art" src="/textures/poster-space.svg" alt="" width="720" height="1000" loading="lazy" decoding="async" />
+  <span class="grain" aria-hidden="true"></span>
+
+  <p class="booking">Now booking</p>
+
+  <div class="banner">
+    <!-- Ribbon: a wavy cream band with notched tails, printed over an off-register orange plate -->
+    <svg class="ribbon" viewBox="0 0 400 120" preserveAspectRatio="none" aria-hidden="true">
+      <path class="tail" d="M6 40 L56 34 L56 96 L6 102 L24 70Z"></path>
+      <path class="tail" d="M394 40 L344 34 L344 96 L394 102 L376 70Z"></path>
+      <path class="plate" d="M40 22 Q120 4 200 18 T360 22 L360 104 Q280 122 200 108 T40 104Z" transform="translate(5 4)"></path>
+      <path class="band" d="M40 22 Q120 4 200 18 T360 22 L360 104 Q280 122 200 108 T40 104Z"></path>
+    </svg>
+    <WavyTitle as="p" text="Holden Anderson" class="title" amp={0.9} />
+  </div>
+
+  <p class="strip">
+    <span class="when">Starting June 2027</span>
+    <span class="sep" aria-hidden="true"> · </span>
+    <span>Backend · Infrastructure · AI engineering</span>
+  </p>
+</div>
+
+<style>
+  .poster {
+    position: relative;
+    isolation: isolate;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    aspect-ratio: 720 / 1000;
+    overflow: hidden;
+    background: #2f4a36;
+    color: var(--chocolate);
+    text-align: center;
+  }
+  .art {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 0;
+  }
+  .poster .grain {
+    z-index: 1;
+  }
+  .booking,
+  .banner,
+  .strip {
+    position: relative;
+    z-index: 2;
+  }
+  .booking {
+    margin-top: 6%;
+    padding: 0.22em 0.9em;
+    background: var(--cream);
+    border: 2px solid var(--chocolate);
+    border-radius: 999px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.74rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    box-shadow: 3px 3px 0 var(--poster-orange);
+  }
+
+  /* The name banner sits low, over the clouds and hills */
+  .banner {
+    margin-top: auto;
+    width: 94%;
+    display: grid;
+    place-items: center;
+    padding: 0.95rem 13% 1.05rem;
+  }
+  .ribbon {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .ribbon .band {
+    fill: var(--cream);
+    stroke: var(--chocolate);
+    stroke-width: 3;
+    vector-effect: non-scaling-stroke;
+  }
+  .ribbon .plate {
+    fill: var(--poster-orange);
+  }
+  .ribbon .tail {
+    fill: var(--mustard);
+    stroke: var(--chocolate);
+    stroke-width: 3;
+    stroke-linejoin: round;
+    vector-effect: non-scaling-stroke;
+  }
+  .poster :global(.title) {
+    position: relative;
+    justify-content: center;
+    font-size: clamp(1.3rem, 0.85rem + 1.6vw, 1.9rem);
+    line-height: 1.02;
+    text-transform: uppercase;
+    color: var(--chocolate);
+    /* Misregistration: the orange plate printed a hair off the chocolate one */
+    text-shadow: 0.045em 0.04em 0 var(--poster-orange);
+  }
+
+  .strip {
+    width: calc(100% - 1.6rem);
+    margin: 0.55rem 0 0.8rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--cream);
+    border: 2px solid var(--chocolate);
+    border-radius: 8px;
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.5;
+  }
+  /* Date on its own line; the separator dot is only there for copy/paste */
+  .sep {
+    font-size: 0;
+  }
+  .when {
+    display: block;
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: 1.05em;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+</style>

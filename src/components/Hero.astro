@@ -1,44 +1,98 @@
 ---
 /*
-  Hero: the turntable on the shag rug. Rug styles live in src/styles/surfaces.css.
-  The album sleeve (Tracklist) overlaps the rug's bound edge.
+  Hero: flat burnt orange, like a screen-printed poster. A giant "HOLDEN ANDERSON" scrolls
+  slowly sideways behind the turntable (aria-hidden; the real h1 is below it).
+
+  Marquee: a CSS animation on transform only, so it runs on the compositor. It pauses offscreen
+  (IntersectionObserver flips data-paused) and is off under prefers-reduced-motion.
+  It's a lighter orange than the field, so where it passes behind text, contrast only goes up.
+
+  Grain sits in the empty area around the turntable only (.hero-grain), never behind the text.
+  The album sleeve (Tracklist) overlaps the stage's bottom edge; data-swap-edge marks that edge.
 */
 import Turntable from './Turntable.astro';
+import TopNav from './TopNav.astro';
 import { site } from '../data/site';
 ---
 
-<section class="rug" aria-label="Introduction">
+<section class="stage hero-stage" aria-label="Introduction" data-swap-edge>
+  <TopNav />
+  <div class="marquee" aria-hidden="true" data-marquee>
+    <div class="marquee-track">
+      <span>Holden Anderson</span><span class="dot">●</span><span>Holden Anderson</span><span class="dot">●</span>
+    </div>
+  </div>
+
   <div class="container hero">
     <div class="intro">
       <p class="eyebrow"><span>{site.school}</span> <span aria-hidden="true">·</span> <span>{site.graduation}</span></p>
       <h1>{site.name}</h1>
       <p class="tagline">{site.tagline}</p>
-      <!-- DRAFT: Holden to edit -->
       <p class="looking">{site.lookingFor}</p>
 
-      <nav aria-label="Primary links">
-        <ul class="pills">
-          <li><a class="pill" href={site.links.github}>GitHub</a></li>
-          <li><a class="pill" href={site.links.linkedin}>LinkedIn</a></li>
-          <li><a class="pill" href={site.links.resume}>Resume <span class="pill-note">(PDF)</span></a></li>
-          <li><a class="pill" href={`mailto:${site.links.email}`}>Email</a></li>
-        </ul>
-      </nav>
+      <ul class="pills" aria-label="Primary links">
+        <li><a class="pill" href={site.links.github}>GitHub</a></li>
+        <li><a class="pill" href={site.links.linkedin}>LinkedIn</a></li>
+        <li><a class="pill" href={site.links.resume}>Resume <span class="pill-note">(PDF)</span></a></li>
+        <li><a class="pill" href={`mailto:${site.links.email}`}>Email</a></li>
+      </ul>
     </div>
 
     <div class="deck">
-      <!-- Floor-lamp glow: a static gradient behind the turntable. It never repaints while the record spins. -->
-      <span class="lamp" aria-hidden="true"></span>
+      <span class="hero-grain grain" aria-hidden="true"></span>
       <Turntable />
     </div>
   </div>
+
+  <!-- Quiet "pause motion" toggle in the bottom corner: stops the marquee and the eyes band -->
+  <div class="container motion-row">
+    <button type="button" class="motion-toggle" aria-pressed="false" data-motion-toggle>
+      <span class="motion-icon" aria-hidden="true"></span>
+      Pause motion
+    </button>
+  </div>
 </section>
+
+<script>
+  // "Pause motion": one site-wide switch on <html data-motion>, remembered in localStorage.
+  // The marquee pauses through CSS; the eyes listen for the 'motionchange' event.
+  const toggle = document.querySelector<HTMLButtonElement>('[data-motion-toggle]');
+  if (toggle) {
+    const root = document.documentElement;
+    const sync = () => toggle.setAttribute('aria-pressed', String(root.dataset.motion === 'paused'));
+    sync();
+    toggle.addEventListener('click', () => {
+      const paused = root.dataset.motion !== 'paused';
+      if (paused) root.dataset.motion = 'paused';
+      else delete root.dataset.motion;
+      try {
+        if (paused) localStorage.setItem('motion', 'paused');
+        else localStorage.removeItem('motion');
+      } catch {
+        // Storage blocked: the toggle still works for this visit.
+      }
+      sync();
+      document.dispatchEvent(new CustomEvent('motionchange', { detail: { paused } }));
+    });
+  }
+
+  // Pause the marquee when the hero is offscreen. CSS handles reduced motion.
+  const m = document.querySelector<HTMLElement>('[data-marquee]');
+  if (m && 'IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => {
+      m.dataset.paused = String(!e.isIntersecting);
+    }).observe(m);
+  }
+</script>
 
 <style>
   .hero {
+    position: relative;
+    z-index: 1;
     display: grid;
     gap: var(--space-5);
     align-items: center;
+    padding-top: clamp(1rem, 3vw, 2.5rem);
   }
   @media (min-width: 900px) {
     .hero {
@@ -47,14 +101,71 @@ import { site } from '../data/site';
     }
   }
 
+  /* ── Marquee ─────────────────────────────────────────────────────────── */
+  .marquee {
+    position: absolute;
+    z-index: 0;
+    left: 0;
+    right: 0;
+    /* Phones: behind the turntable, which sits under the text. Desktop: mid-height, behind the deck. */
+    bottom: clamp(9rem, 26vw, 15rem);
+    overflow: hidden;
+    pointer-events: none;
+    user-select: none;
+  }
+  @media (min-width: 900px) {
+    .marquee {
+      bottom: auto;
+      top: 50%;
+    }
+  }
+  .marquee-track {
+    display: flex;
+    width: max-content;
+    white-space: nowrap;
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: clamp(7rem, 24vw, 19rem);
+    line-height: 0.9;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--hero-marquee);
+    will-change: transform;
+    animation: marquee 70s linear infinite;
+  }
+  .marquee-track span {
+    padding-right: 0.3em;
+  }
+  .marquee-track .dot {
+    font-size: 0.35em;
+    align-self: center;
+  }
+  .marquee[data-paused='true'] .marquee-track,
+  :global(html[data-motion='paused']) .marquee-track {
+    animation-play-state: paused;
+  }
+  /* Two identical halves: sliding by exactly one half loops seamlessly. */
+  @keyframes marquee {
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .marquee-track {
+      animation: none;
+    }
+  }
+
+  /* ── Text ────────────────────────────────────────────────────────────── */
   .eyebrow {
     display: flex;
     flex-wrap: wrap;
     column-gap: 0.6em;
     font-family: var(--font-mono);
     font-size: var(--step--1);
+    font-weight: 600;
     letter-spacing: 0.04em;
-    color: var(--on-rug-muted);
   }
   /* Each phrase wraps as a unit, so a phone never shows "Graduating" alone on a line */
   .eyebrow span {
@@ -62,30 +173,30 @@ import { site } from '../data/site';
   }
   /*
     70s album lettering: cream letters, then stacked offset layers.
-    The first layer is a thin chocolate keyline, so the cream edge always meets a dark color
-    (11.8:1). Cream directly on orange would be 2.97:1. Offsets are in em, so they scale with the type.
+    The first layer is a thin deep-brown keyline, so the cream edge always meets a dark color
+    (13.6:1). Cream directly on orange would be 2.97:1. Offsets are in em, so they scale.
   */
   h1 {
     margin-top: var(--space-2);
-    padding-bottom: 0.1em; /* room for the deepest layer */
-    color: var(--on-rug);
+    padding-bottom: 0.1em;
+    color: var(--headline-fill);
     font-size: clamp(2.8rem, 2rem + 4.2vw, 5.2rem);
     line-height: 0.95;
     text-shadow:
       0.02em 0.02em 0 var(--headline-keyline),
-      0.045em 0.045em 0 var(--band-1),
-      0.07em 0.07em 0 var(--band-2),
-      0.095em 0.095em 0 var(--band-3);
+      -0.01em -0.01em 0 var(--headline-keyline),
+      0.05em 0.05em 0 var(--headline-layer-1),
+      0.08em 0.08em 0 var(--headline-layer-2);
   }
   .tagline {
     margin-top: var(--space-4);
     font-size: var(--step-1);
+    font-weight: 500;
     line-height: 1.4;
-    color: var(--on-rug);
   }
   .looking {
     margin-top: var(--space-3);
-    color: var(--on-rug-muted);
+    font-weight: 500;
   }
 
   .pills {
@@ -107,10 +218,7 @@ import { site } from '../data/site';
     color: var(--pill-text);
     font-weight: 700;
     text-decoration: none;
-    /* Orange as an accent only: it can't be text on green (3.4:1). */
-    box-shadow:
-      0 3px 0 var(--pill-accent),
-      0 8px 18px -8px rgb(0 0 0 / 0.6);
+    box-shadow: 0 3px 0 var(--pill-accent);
     transition:
       background-color 120ms ease,
       transform 120ms ease;
@@ -121,15 +229,73 @@ import { site } from '../data/site';
   }
   .pill:active {
     transform: translateY(2px);
-    box-shadow:
-      0 1px 0 var(--pill-accent),
-      0 4px 10px -6px rgb(0 0 0 / 0.6);
+    box-shadow: 0 1px 0 var(--pill-accent);
   }
   .pill-note {
     font-weight: 500;
   }
 
-  /* The deck is exactly the turntable's size, so the lamp scales with the turntable, not the column. */
+  /* ── Pause motion ────────────────────────────────────────────────────── */
+  /* The home stage is taller at the bottom to fit the toggle above the sleeve's overlap */
+  .hero-stage {
+    padding-bottom: calc(clamp(5rem, 10vw, 6.5rem) + 4rem);
+  }
+  .motion-row {
+    position: absolute;
+    z-index: 2;
+    left: 0;
+    right: 0;
+    bottom: calc(clamp(5rem, 10vw, 6.5rem) + 0.5rem);
+    display: flex;
+    justify-content: flex-end;
+    pointer-events: none;
+  }
+  .motion-toggle {
+    pointer-events: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5em;
+    min-height: 44px;
+    padding: 0 0.9em;
+    border: 1.5px solid color-mix(in srgb, var(--hero-text) 45%, transparent);
+    border-radius: 999px;
+    background: transparent;
+    color: var(--hero-text);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+  }
+  .motion-toggle:hover {
+    border-color: var(--hero-text);
+  }
+  .motion-toggle[aria-pressed='true'] {
+    background: var(--hero-text);
+    border-color: var(--hero-text);
+    color: var(--hero-bg);
+  }
+  /* Pause bars; a play triangle once motion is paused */
+  .motion-icon {
+    width: 0.6em;
+    height: 0.75em;
+    border-inline: 0.2em solid currentColor;
+  }
+  .motion-toggle[aria-pressed='true'] .motion-icon {
+    width: 0;
+    height: 0;
+    border: 0;
+    border-block: 0.4em solid transparent;
+    border-left: 0.65em solid currentColor;
+  }
+  /* Nothing moves under reduced motion anyway, so the toggle has nothing to do */
+  @media (prefers-reduced-motion: reduce) {
+    .motion-row {
+      display: none;
+    }
+  }
+
+  /* ── Deck ────────────────────────────────────────────────────────────── */
   .deck {
     position: relative;
     isolation: isolate;
@@ -143,40 +309,19 @@ import { site } from '../data/site';
     position: relative;
     z-index: 1;
   }
-
   /*
-    The lamp stands off to the upper right, so its pool of light is centered up and to the
-    right of the record. Glow falls off: peak → half at 45% → nothing at the edge.
-    Hero text must sit where the glow is under --lamp-on-text-max; the browser audit checks it.
+    Grain in the empty space around the turntable: from the deck's top edge out to the screen
+    edges and down to the stage bottom (the stage clips it). Never up into the text.
   */
-  /*
-    The pool of light is an ellipse, wider than it is tall, the way lamplight spreads across a
-    floor. Stacked layout (phones/tablets): a smaller pool centered on the turntable, so it falls
-    off before the text above. Side by side: a bigger pool up and to the right of the record.
-  */
-  .lamp {
-    position: absolute;
-    z-index: 0;
-    left: 54%;
-    top: 56%;
-    width: 160%;
-    height: 112%;
-    transform: translate(-50%, -50%);
-    border-radius: 50%;
-    background: radial-gradient(
-      closest-side,
-      rgb(var(--lamp) / var(--lamp-peak)) 0%,
-      rgb(var(--lamp) / calc(var(--lamp-peak) * 0.5)) 45%,
-      rgb(var(--lamp) / 0) 100%
-    );
-    pointer-events: none;
+  .hero-grain {
+    inset: 0 -50vw -12rem -50vw;
+    /* Soft edges, like ink density falling off, instead of a hard rectangle */
+    -webkit-mask-image: radial-gradient(closest-side, #000 55%, transparent);
+    mask-image: radial-gradient(closest-side, #000 55%, transparent);
   }
   @media (min-width: 900px) {
-    .lamp {
-      left: 66%;
-      top: 44%;
-      width: 165%;
-      height: 175%;
+    .hero-grain {
+      inset: -1.5rem -50vw -12rem calc(-1 * var(--space-5));
     }
   }
 </style>

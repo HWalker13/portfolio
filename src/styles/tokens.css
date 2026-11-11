@@ -1,31 +1,44 @@
 /*
   Design tokens. Raw palette first, then semantic roles that components use.
-  Contrast for every text pair is checked by `npm run contrast` (scripts/contrast.mjs);
-  keep the two files in sync.
+  Contrast for every text pair is checked by `npm run contrast` (scripts/contrast.mjs),
+  which reads this file directly; keep the two in sync.
+
+  Screen-print rule: each section uses 2–3 inks.
+    hero ............. burnt orange + deep brown + cream
+    eyes band ........ red-orange field; hand-inked eyes in black, white, cobalt, sage, yellow
+    tracklist, about . cream + chocolate + orange accent (ribbon adds mustard/olive)
+    projects ......... chocolate + cream + orange/mustard/brown wave
+    let's talk ....... chocolate wallpaper with muted orange/slate/cream, cream type;
+                       cork + dark walnut board; the poster has its own inks (make-poster-art.mjs)
 */
 :root {
-  /* Raw palette (from the spec) */
+  /* Raw palette */
   --cream: #f3e6cc;
   --paper: #fbf4e4;
   --chocolate: #3b2314;
   --burnt-orange: #d9622b;
   --mustard: #e0a526;
-  --avocado: #6b7b3a;
+  --avocado: #6b7b3a; /* "olive" */
   --walnut: #6e4527;
   --deep-brown: #1e140d;
-
   /*
-    Shag-rug greens. Decorative only, like mustard and avocado: never text on cream.
-    The rug itself is a pre-generated tile (scripts/make-rug.mjs), not a live filter.
+    Blues. Slate is decorative only: 3.75:1 on cream and 3.16:1 on chocolate, so it never
+    carries text. --slate-ink is the same hue darkened to pass (6.01:1 on paper), for the LinkedIn mark.
+    Powder is a surface color: chocolate text on it is 7.97:1.
   */
-  --rug-base: #2f4a23;
-  --rug-fiber: #4e6b2e;
-  --rug-fiber-light: #7a8f3a;
-  --rug-binding: #1d2f16;
+  --slate: #4f7a93;
+  --slate-ink: #3e6178;
+  --powder: #a9c4cc;
+  /*
+    Poster ink: the gig poster's art is a pre-rendered SVG (scripts/make-poster-art.mjs, where
+    all its inks live). CSS only needs its orange, for the off-register print plate behind the
+    poster's name and tag. Art only, never text.
+  */
+  --poster-orange: #e0702a;
 
   /*
     Burnt orange is only 2.97:1 on cream, below AA even for large text.
-    So in light mode it's decorative only, and text/links use this darker ink (4.85:1).
+    So on cream it's decorative only, and text/links use this darker ink (4.85:1).
   */
   --orange-ink: #a8441a;
 
@@ -44,44 +57,79 @@
   --band-3: var(--chocolate);
   --band-4: var(--avocado);
 
-  /* Hero name: cream letters, thin chocolate keyline, then orange / mustard / chocolate offset layers */
-  --headline-keyline: var(--chocolate);
-  --grain-opacity: 0.07;
+  /*
+    Print texture. ONE knob: every grain layer on the site is drawn at this opacity.
+    0 removes it everywhere. Grain only ever sits on color fields, stripes, the eyes band,
+    the wallpaper and the cork; text, stats, links and buttons sit on clean color above it.
+  */
+  --grain: 0.22;
+  --grain-image: url('/textures/grain.png');
 
   /*
-    Rug (hero). Text sits on the tile under a dark scrim. The scrim is never lighter than
-    --rug-scrim-min anywhere, so contrast is checked against the tile's brightest pixel
-    under that minimum. Orange text fails on green at any shade (similar luminance),
-    so links on the rug are paper pills, and orange is only an accent there.
+    Hero: flat burnt orange. Deep brown text is 4.94:1 on it; cream fails (2.97:1), so the
+    name keeps its chocolate keyline. The marquee name behind is a lighter orange, which only
+    raises text contrast where they overlap (6.15:1).
   */
-  --rug-image: url('/textures/rug.webp');
-  --rug-scrim: 14 22 9;
-  --rug-scrim-min: 0.52;
-  --rug-scrim-max: 0.78;
-  --on-rug: var(--cream);
-  --on-rug-muted: #ddd0b0;
-  --focus-on-rug: var(--mustard);
+  --hero-bg: var(--burnt-orange);
+  --hero-marquee: #e37a47;
+  --hero-text: var(--deep-brown);
+  --hero-focus: var(--deep-brown);
+  --headline-fill: var(--cream);
+  --headline-keyline: var(--deep-brown);
+  --headline-layer-1: var(--mustard);
+  --headline-layer-2: var(--deep-brown);
   --pill-bg: var(--paper);
   --pill-text: var(--chocolate);
   --pill-bg-hover: var(--mustard);
-  --pill-accent: var(--burnt-orange);
+  --pill-accent: var(--deep-brown);
   /* "Now playing:" key on the turntable's paper caption tag (the tag is paper in both themes) */
   --now-playing-key: var(--walnut);
 
+  /* Eyes band: red-orange field; the eyes' inks live in src/scripts/eye-art.ts (decorative) */
+  --eyes-bg: var(--burnt-orange);
+
+  /* Projects reel: chocolate field, cream text, wave in orange / mustard / brown */
+  --reel-bg: var(--chocolate);
+  --reel-text: var(--cream);
+  --reel-muted: #e2cfaa;
+  --reel-accent: var(--mustard);
+  --reel-focus: var(--mustard);
+  --wave-1: var(--burnt-orange);
+  --wave-2: var(--mustard);
+  --wave-3: #8a5a35;
+
   /*
-    Lamp glow on the rug: a static amber radial gradient around the turntable.
-    --lamp-on-text-max is the most glow allowed behind any hero text. npm run contrast checks
-    text against the rug with that much glow added, and the browser audit measures the real
-    glow at every text box and fails if it's higher.
+    Let's talk: muted flower wallpaper on the reel's chocolate, cream type straight on it (on a
+    feathered patch of plain chocolate), dark cork in a dark walnut frame, warm lamp, paper items.
   */
-  --lamp: 255 168 64;
-  --lamp-peak: 0.42;
-  --lamp-on-text-max: 0.06;
+  --wallpaper: url('/textures/flowers.svg');
+  --wallpaper-bg: var(--chocolate);
+  --talk-text: var(--cream);
+  --talk-shadow-1: var(--burnt-orange);
+  --talk-shadow-2: var(--mustard);
+  --cork: url('/textures/cork.webp');
+  --cork-bg: #8a5830;
+  --frame-top: #4a2c17;
+  --frame-bottom: #2b170b;
+  --lamp-warm: 0.18;
+  --lamp-shadow: 0.38;
+  --pin-orange: #b5653f;
+  --pin-slate: #5f7c88;
+  --pin-mustard: #b8923f;
+  --item-ink: var(--chocolate);
+  --note-rule: var(--powder);
+  --ticket-bg: var(--mustard);
+
+  /* Footer strip */
+  --colophon-bg: var(--chocolate);
+  --colophon-text: var(--cream);
+  --colophon-muted: #e2cfaa;
 
   /* Type */
   --font-display: 'Fraunces Variable', 'Cooper Black', Georgia, serif;
   --font-body: 'DM Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, monospace;
+  --font-hand: 'Caveat Variable', 'Bradley Hand', cursive;
 
   /* Fraunces at its softest and heaviest reads closest to Cooper Black. */
   --display-variation: 'SOFT' 100, 'WONK' 0;
@@ -104,12 +152,12 @@
   --measure: 65ch;
   --page-max: 72rem;
   --radius: 14px;
-  --radius-lg: 24px;
 }
 
 /*
-  Dark theme. The light-mode orange ink drops to 3.02:1 on deep brown,
-  so links get a brighter orange here (6.20:1 on bg, 5.65:1 on surface).
+  Dark theme: the late-night version of the same room.
+  The light-mode orange ink drops to 3.02:1 on deep brown, so links get a brighter orange
+  here (6.20:1 on bg). Orange fields darken to rust and their text flips to cream.
 */
 @media (prefers-color-scheme: dark) {
   :root {
@@ -123,15 +171,31 @@
     --focus: var(--mustard);
     --band-3: #8a5a35;
     --band-4: #7d8f45;
-    --lamp-peak: 0.32;
-    --grain-opacity: 0.05;
+    --grain: 0.3;
 
-    /* Darker, moodier rug: dark tile plus a heavier scrim. */
-    --rug-base: #1a2914;
-    --rug-binding: #0f190b;
-    --rug-image: url('/textures/rug-dark.webp');
-    --rug-scrim: 8 12 5;
-    --rug-scrim-min: 0.45;
-    --rug-scrim-max: 0.85;
+    --hero-bg: #8f3a16;
+    --hero-marquee: #9c4520;
+    --hero-text: var(--cream);
+    --hero-focus: var(--mustard);
+    --headline-layer-1: var(--burnt-orange);
+    --headline-layer-2: var(--deep-brown);
+
+    --eyes-bg: #8f3a16;
+
+    --reel-bg: var(--deep-brown);
+    --wave-1: #b8501f;
+    --wave-2: #b9861d;
+    --wave-3: #5e3c22;
+
+    --wallpaper: url('/textures/flowers-dark.svg');
+    --wallpaper-bg: var(--deep-brown);
+    --talk-shadow-1: #b8501f;
+    --talk-shadow-2: #9c7418;
+    --frame-top: #3a2211;
+    --frame-bottom: #1f1108;
+    --lamp-warm: 0.12;
+    --lamp-shadow: 0.6;
+
+    --colophon-bg: #120c08;
   }
 }

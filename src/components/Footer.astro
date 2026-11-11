@@ -1,97 +1,78 @@
 ---
+/*
+  Footer strip. On the home page the corkboard above already holds every contact link, so it's
+  just the colophon (compact). Inner pages get the contact links too.
+*/
 import { site } from '../data/site';
+interface Props {
+  compact?: boolean;
+}
+const { compact = false } = Astro.props;
 const year = new Date().getFullYear();
 ---
 
 <footer class="footer">
-  <!-- 70s sunset supergraphic in the corner of the floor. Decorative; text never sits on it. -->
-  <span class="sunset" aria-hidden="true"></span>
   <div class="container inner">
-  <div class="contact">
-    <p class="say">Get in touch</p>
-    <a class="email" href={`mailto:${site.links.email}`}>{site.links.email}</a>
-  </div>
-  <ul class="links">
-    <li><a href={site.links.github}>GitHub</a></li>
-    <li><a href={site.links.linkedin}>LinkedIn</a></li>
-    <li><a href={site.links.resume}>Resume (PDF)</a></li>
-  </ul>
-  <p class="colophon">
-    © {year} {site.name}. Built with <a href="https://astro.build">Astro</a>. No cookies, no analytics.
-  </p>
+    {
+      !compact && (
+        <ul class="links">
+          <li>
+            <a href={`mailto:${site.links.email}`}>{site.links.email}</a>
+          </li>
+          <li>
+            <a href={site.links.github}>GitHub</a>
+          </li>
+          <li>
+            <a href={site.links.linkedin}>LinkedIn</a>
+          </li>
+          <li>
+            <a href={site.links.resume}>Resume (PDF)</a>
+          </li>
+        </ul>
+      )
+    }
+    <p class="colophon">
+      © {year} {site.name}. No cookies, no analytics.
+    </p>
   </div>
 </footer>
 
 <style>
   .footer {
-    --sun: clamp(9.5rem, 26vw, 21rem);
-    position: relative;
-    overflow: hidden;
+    --focus: var(--mustard);
+    background: var(--colophon-bg);
+    color: var(--colophon-text);
   }
   .inner {
-    position: relative;
-    z-index: 1;
-    display: grid;
-    gap: var(--space-4);
-    padding-block: var(--space-6) var(--space-5);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3) var(--space-5);
+    padding-block: var(--space-4);
   }
-  /* Phones: the text column is full width, so keep every line above the arcs. */
-  @media (max-width: 719px) {
-    .inner {
-      padding-bottom: calc(var(--sun) + var(--space-3));
-    }
+  a {
+    color: var(--colophon-text);
+    text-decoration-color: var(--burnt-orange);
   }
-
-  /* Quarter-circle sunset: an orange sun and three bands, anchored to the bottom-right corner */
-  .sunset {
-    position: absolute;
-    right: 0;
-    bottom: 0;
-    width: var(--sun);
-    height: var(--sun);
-    pointer-events: none;
-    background: radial-gradient(
-      circle var(--sun) at 100% 100%,
-      var(--band-1) 0 calc(var(--sun) * 0.36),
-      transparent calc(var(--sun) * 0.36 + 0.5px) calc(var(--sun) * 0.44),
-      var(--band-2) calc(var(--sun) * 0.44 + 0.5px) calc(var(--sun) * 0.58),
-      transparent calc(var(--sun) * 0.58 + 0.5px) calc(var(--sun) * 0.64),
-      var(--band-3) calc(var(--sun) * 0.64 + 0.5px) calc(var(--sun) * 0.78),
-      transparent calc(var(--sun) * 0.78 + 0.5px) calc(var(--sun) * 0.84),
-      var(--band-4) calc(var(--sun) * 0.84 + 0.5px) calc(var(--sun) * 0.98),
-      transparent calc(var(--sun) * 0.98 + 0.5px)
-    );
-  }
-  .say {
-    font-family: var(--font-display);
-    font-variation-settings: var(--display-variation);
-    font-weight: 800;
-    font-size: var(--step-2);
-  }
-  .email {
-    display: inline-block;
-    margin-top: var(--space-2);
-    font-family: var(--font-mono);
-    font-size: var(--step-1);
-    overflow-wrap: anywhere;
+  a:hover {
+    color: var(--mustard);
   }
   .links {
     list-style: none;
     padding: 0;
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2) var(--space-4);
+    gap: 0 var(--space-4);
     font-weight: 600;
   }
   .links a {
     display: inline-block;
-    padding-block: 0.35rem;
+    padding-block: 0.6rem;
+    overflow-wrap: anywhere;
   }
   .colophon {
     font-size: var(--step--1);
-    color: var(--text-muted);
-  }
-  .colophon a {
-    color: inherit;
+    color: var(--colophon-muted);
   }
 </style>

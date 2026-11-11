@@ -9,6 +9,7 @@ import Base from '../../layouts/Base.astro';
 import Footer from '../../components/Footer.astro';
 import ProofLinks from '../../components/ProofLinks.astro';
 import Ribbon from '../../components/Ribbon.astro';
+import TopNav from '../../components/TopNav.astro';
 
 export const getStaticPaths = (async () => {
   const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
@@ -30,12 +31,10 @@ const { Content } = await render(entry);
 ---
 
 <Base title={`${title}: liner notes`} description={tagline} ogType="article">
-  <section class="rug rug--slim" aria-label="Site">
-    <div class="container toprow">
-      <a class="rug-link home" href="/">Holden Anderson</a>
-      <a class="rug-link" href="/#tracklist-title">Back to the tracklist</a>
-    </div>
-  </section>
+  <div class="stage stage--slim">
+    <TopNav />
+    <p class="container back"><a href={`/#${entry.id}`}>← Back to {title} on the home page</a></p>
+  </div>
 
   <article class="sleeve container">
     <div class="sleeve-inner sleeve-inner--ribbon">
@@ -97,7 +96,7 @@ const { Content } = await render(entry);
               <span class="name">{next.data.track}. {next.data.title}</span>
             </a>
           ) : (
-            <a href="/#tracklist-title" class="next">
+            <a href="/#tracklist" class="next">
               <span class="dir">End of Side B</span>
               <span class="name">Back to the tracklist</span>
             </a>
@@ -111,24 +110,10 @@ const { Content } = await render(entry);
 </Base>
 
 <style>
-  .toprow {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: space-between;
-    align-items: center;
-    gap: var(--space-2) var(--space-4);
-  }
-  .toprow a {
+  .back a {
     display: inline-block;
-    padding-block: 0.5rem;
+    padding-block: 0.6rem;
     font-weight: 600;
-  }
-  .home {
-    font-family: var(--font-display);
-    font-variation-settings: var(--display-variation);
-    font-weight: 900;
-    font-size: var(--step-1);
-    text-decoration: none;
   }
 
   .notes-head {

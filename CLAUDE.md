@@ -17,9 +17,11 @@ Personality is the differentiator, but never at the cost of audience #1. If an e
 
 ## Stack (and why)
 
-- **Astro + TypeScript.** The site is almost entirely static content, and Astro ships zero JS by default. The only interactive piece (the turntable) is a single island. I need to be able to explain this choice in an interview.
+- **Astro + TypeScript.** The site is almost entirely static content, and Astro ships zero JS by default. The interactive pieces (the turntable, the eyes band, the project reel) are small vanilla-TS scripts; everything else is static HTML. I need to be able to explain this choice in an interview.
 - **Plain CSS with custom properties** (no Tailwind). The design is very custom, so utility classes wouldn't save much, and tokens on `:root` make theming easy.
-- **The turntable is vanilla TypeScript + SVG** inside an Astro component, loaded with `client:visible`. No React or animation libraries. It doesn't need them.
+- **The turntable is vanilla TypeScript + SVG** inside an Astro component, loaded with `client:visible`. No React or animation libraries. It doesn't need them. The same goes for the eyes and the reel: their pure parts are split out and unit-tested (`src/scripts/eye-art.ts` holds the eye designs and collage layout as plain data, `eyes.ts` the pupil tracking, `reel.ts` the wheel geometry).
+- **Generated art is checked in, with its generator.** `npm run textures` (grain, cork, flower wallpaper), `npm run poster-art` (the gig poster), `npm run icons` and `npm run og` each write static files to `public/`. Nothing is generated at build time.
+- **Keep the tree clean.** When a feature or asset is replaced, delete the old one, its generator, its npm script, its tokens, its contrast checks and its CLAUDE.md text in the same change. No "old", "v1", "backup" or commented-out copies; git history is the backup.
 - **Project content lives in an Astro content collection** (`src/content/projects/*.md`) with typed frontmatter (zod schema), so adding a project later means adding one Markdown file.
 - **Deploy target: Vercel**, static output. Don't deploy anything yourself; I'll connect the repo.
 - No analytics, no cookies, no backend.
@@ -35,7 +37,15 @@ The vibe is a warm 1970s record store and album sleeve. It should be confident a
 - `--burnt-orange` #D9622B (primary accent, links)
 - `--mustard` #E0A526 (secondary accent)
 - `--avocado` #6B7B3A (tertiary, use sparingly)
-- `--walnut` #6E4527 (wood tones, turntable plinth)
+- `--walnut` #6E4527 (wood tones, turntable plinth, corkboard frame)
+- `--slate` #4F7A93 (muted denim blue: wallpaper, polaroid, eyeliner). Decorative only: it fails as text on cream (3.75:1) and chocolate (3.16:1). Text in this hue uses `--slate-ink` #3E6178 (the LinkedIn mark; 6.01:1 on paper).
+- `--powder` #A9C4CC (pale powder blue surface; chocolate text on it is 7.97:1)
+
+**Poster inks (the gig poster's art only, never site colors, never text):** a deep muted green sky (#2F4A36), greens for the hills (#3F6638, #5C8A3C, acid green #8CBF3F, olive), poster orange #E0702A and a darker orange, mustard, cream and chocolate, with hot pink #E8508A as a small accent (one planet, one flower). They live in `scripts/make-poster-art.mjs`; tokens.css only defines `--poster-orange`, the off-register print plate behind the poster's name and tag.
+
+**Eyes band inks (the eyes only, decorative):** black ink #16110D, white #FFFDF6, cobalt #1F4FA8, sage #9DB48A, yellow #F2C230, blue and brown irises, on the red-orange band. They live in `src/scripts/eye-art.ts`.
+
+**Screen-print rule:** each section uses 2–3 inks, like a screen-printed poster (hero and eyes band: red-orange with black ink, cobalt, sage and yellow; reel: chocolate, cream, orange/mustard/brown wave; Let's talk: the reel's chocolate with a muted orange/slate/cream wallpaper and cream type, plus dark cork and walnut; the poster has its own inks, above). Burnt orange is the anchor. New colors go through `npm run contrast` and are used as text only where they pass.
 
 Add a dark theme under `@media (prefers-color-scheme: dark)` using deep brown (#1E140D) as the background and cream text, with the same accents. Every text/background pair must meet WCAG AA contrast. Check orange-on-cream in particular, and darken the orange for body-size link text if needed.
 
@@ -44,17 +54,23 @@ Add a dark theme under `@media (prefers-color-scheme: dark)` using deep brown (#
 - Body: a clean, highly readable sans (**DM Sans** or similar).
 - Monospace for numbers/code: **JetBrains Mono** or similar.
 
-**Motifs, used with restraint:** rounded corners, subtle paper grain, record-sleeve framing on project cards.
+- Wavy, melting 70s display lettering (`WavyTitle.astro`) is only for big moments: "Let's talk" and the poster title. Body copy and project titles stay in plain Fraunces.
 
-**Setting: a 70s funk living room.**
-- The hero is a deep green shag rug (#2F4A23 base, #4E6B2E and #7A8F3A fibers, soft vignette), rendered as a static pre-generated tile, never a live filter. Rug greens are decorative only, never text on cream.
-- A soft, static warm amber lamp glow lights the turntable on the rug. Static gradient only, nothing that repaints while the record spins.
-- Below the hero, cream paper surfaces (tracklist, project pages) read as an album sleeve lying across the rug's bound edge.
-- Supergraphic stripes: thick, curved bands in orange, mustard, chocolate and olive that bend around section corners, drawn as original CSS/SVG.
-- The name in the hero uses stacked multicolor offset lettering (orange, mustard, chocolate), like 70s album type, with a thin chocolate keyline so the letter edges keep their contrast.
+**Motifs, used with restraint:** rounded corners, print grain, record-sleeve framing on the tracklist.
+
+**Print grain rule:** a subtle risograph-style grain (one static, pre-rendered ~9 KB tile, `public/textures/grain.png`, made by `npm run textures`) goes on background color fields, stripes, the eyes band, the wallpaper and the cork. Never behind body text, stats, links or buttons: those sit on clean color so they stay crisp. Its opacity is the single token `--grain` (0 removes it everywhere).
+
+**Original art only:** every illustration, pattern, texture and mark on the site is drawn for it (SVG/CSS or generated by a script in `scripts/`). No copied images, no likenesses of real people (including me), no real artists, logos or existing characters. Structure can be inspired by portfolios and 1970s posters; the art can't be copied from them.
+
+**Setting: a 70s screen-printed poster you can scroll.**
+- **Pause motion:** one small, quiet toggle in the hero's bottom corner (a real `<button>` with `aria-pressed`) stops the marquee and the eyes. Stored on `<html data-motion="paused">`, remembered in localStorage (wrapped in try/catch) and read before first paint. Hidden under `prefers-reduced-motion`, where nothing moves anyway. The turntable keeps its own Start/Stop.
+- The hero is flat burnt orange (deep-brown text, 4.94:1; dark mode: rust #8F3A16 with cream text). A giant "HOLDEN ANDERSON" in heavy Fraunces scrolls slowly sideways behind the turntable as an aria-hidden marquee, in a lighter orange so text contrast only goes up where they overlap. Transform-only CSS animation, paused offscreen, off under `prefers-reduced-motion`. Grain only in the empty area around the turntable.
+- Below the hero, a cream paper sleeve (the quick tracklist) lies across the stage's bottom edge.
+- Supergraphic stripes: thick, curved bands in orange, mustard, chocolate and olive that bend around section corners (the tracklist ribbon), plus the thick orange/mustard/brown wave behind the project reel. Original CSS/SVG.
+- The name in the hero uses stacked multicolor offset lettering like 70s album type, with a thin deep-brown keyline so the letter edges keep their contrast.
 - On hover/focus, a small record slides partway out of a track's sleeve (just appears under `prefers-reduced-motion`).
-- Light mode is the hero version and should feel as bold as 70s supergraphics on cream. Dark mode is the late-night version of the same room.
-- Hero text and links on the rug must pass `npm run contrast` (4.5:1), including the lamp glow.
+- Light mode is the hero version and should feel as bold as 70s supergraphics. Dark mode is the late-night version of the same room: rust instead of orange, deep brown fields, dimmer wallpaper, and a warm low light on the corkboard.
+- All hero text and links must pass `npm run contrast` (4.5:1).
 
 **Music references:** the only music references on the site are the turntable's record labels and its Now Playing caption. Album titles, artist names and years as text are fine. No album artwork or imitations of covers, no likenesses or photos of musicians, no lyrics, and no real record-company labels, names or logos (no Apple Records apple, Motown/Tamla, Harvest, Capitol, Columbia, Jive, etc.).
 
@@ -62,19 +78,30 @@ Add a dark theme under `@media (prefers-color-scheme: dark)` using deep brown (#
 - A gradient blob hero, "Hi, I'm Holden 👋", or emoji anywhere
 - Typing-effect headlines or "I'm a passionate developer who…" copy
 - A grid of identical cards each with a row of 8 tech pills
-- Parallax, scroll-jacking, or a custom cursor
+- Parallax, scroll-jacking, or a custom cursor (the reel's wheel reads the scroll position; it never scrolls, snaps or slows the page)
 - Stock icons for every skill
 
 ## Site structure
 
 ### Home (`/`), a single page
 
-1. **Hero:** name, a one-line description (e.g., "Backend & AI engineer. I like figuring out how things work, then shipping something people use."), and the **turntable** as the visual centerpiece. Primary links are always visible: GitHub, LinkedIn, Resume (PDF), Email.
-2. **Tracklist (projects):** styled like the back of an album sleeve, as a numbered track listing split into **Side A** and **Side B**. Each "track" shows the project name, a one-line description, 1–2 headline numbers, and proof links (App Store / PyPI / GitHub), plus a link to its liner-notes page. It must scan like a list, not a puzzle.
+0. **Top nav** (on the orange hero, not sticky): name with a tiny-record monogram on the left; "Projects" and a "Let's talk" pill on the right.
+1. **Hero:** name, a one-line description ("Backend & AI engineer. I like figuring out how things work, then shipping something people use."), the "Looking for…" line, and the **turntable** as the visual centerpiece. Primary links are always visible as pills: GitHub, LinkedIn, Resume (PDF), Email.
+2. **Quick tracklist:** right after the hero, on the album sleeve. A compact numbered list of all four projects, split into **Side A** and **Side B** (number, name, one line, proof links), so a recruiter sees everything in 5 seconds. Each name jumps to that project's section in the reel. It must scan like a list, not a puzzle.
    - Side A: 1. Lovely, 2. NFL Game Predictor
    - Side B: 3. swapLLM + swaptrace, 4. Kache
-3. **About:** 3–4 sentences, plus the stack I actually use: Python, FastAPI, TypeScript, React Native (Expo), PostgreSQL, Redis, Docker, AWS (EC2/ECS), pytest.
-4. **Footer/contact:** email, links, and a small "built with Astro" note.
+3. **Eyes band:** a half-drop repeat of hand-inked 1960s pop-art eyes on a red-orange strip, like a printed textile (about 135–235px tall, by breakpoint). Built at build time by `grid()` in `src/scripts/eye-art.ts`.
+   - **Pattern:** an even grid with uniform spacing; every other column dropped by half a cell. All eyes about the same size (±10%), each tilted within ±12° (fixed seed). Designs cycle in a fixed order, `(2·column + row) mod 5`, so no two identical designs touch sideways, up/down or diagonally. The pattern bleeds off all four edges (clipped by the band), with the same density at every width: about 2 rows on phones, 2.5 mid, 3 on desktop. The desktop grid is generated 1.4× wider than it shows and centered, so screens up to about 2,000px get more pattern, not bigger eyes. Whites never overlap; makeup may nearly touch.
+   - **Style:** original drawings in the manner of 1960s pop-art textile prints. Line-weight hierarchy: the upper liner band is the heaviest line (thin at the inner corner, thick toward the outer, ending in a sharp tapered flick); then lashes and wedge spikes; then the lower lid and the crease; then hatching. Upper lashes (designs a–d) are tapered pen strokes growing from the liner, curving out and up, short at the inner corner and longer toward the outer, in close clumps like mascara. The lower lid is a thin line with an inner rim and a few sparse ticks near the outer corner. One thin crease line above the lid with fine hatching under the eyeshadow's edge. Grey hatching in the corners of the white.
+   - **Iris:** about half the opening's width; its top hidden under the upper lid, its bottom meeting the lower lid. Radial pen hatching, dark limbal ring, pupil and catchlight.
+   - **Five designs:** (a) cobalt lid, liner flick extended into a wing; (b) sage lid; (c) yellow lid swept toward the brow; (d) a yellow flower-shaped petal frame; (e) 1960s painted-on lashes: 7 filled black wedge spikes above and 6 below in a starburst, with a heavy liner around the whole eye. Palette: red-orange background, cobalt, sage, yellow, black ink, white; irises blue or brown.
+   - **Tests** (`eyes.test.ts`): uniform grid spacing, exact half-drop offset, size and tilt limits, no identical neighbors, all five designs present, no empty rows or columns and bleed on every edge, no white overlap, iris size and placement, and the iris staying inside the opening at full travel.
+   - **Motion:** each iris is its own layer clipped to the eye opening, so it slides under the lids as it follows the cursor (adjusted for the eye's tilt; small travel, so the big iris never leaves the opening). Eyes cropped off the band's sides are skipped. Touch devices: the eyes glance around on their own. Still under reduced motion and while motion is paused. Decorative (aria-hidden); one pointermove listener and one rAF loop for all irises, transform only. Each design is drawn once as SVG symbols and every eye is a few `<use>` references.
+4. **Project reel:** one project per screen on chocolate, with the supergraphic wave behind. Left: giant name, one line, 2 stats with context, proof links, liner-notes link, and a "01 / 04" counter with real up/down buttons. Right (≥768px, motion OK): demo cards on a curved vertical wheel in a sticky column. The wheel follows normal page scroll and never takes over the scroll: the focused card is flat, sharp and playing; neighbors rotate away (rotateX with perspective), shrink, dim, blur, and get a faint chromatic-aberration edge; the focused card tilts slightly toward the pointer. Only the focused card plays. Under 768px or with reduced motion: no wheel; each section shows its own flat card (autoplaying muted while visible on phones; poster + Play button under reduced motion). Videos are muted, looped, playsinline, `preload="none"`, with a poster frame and a Play/Pause button; until a project has one (frontmatter `video`), its card is a styled placeholder.
+5. **About:** one paragraph in my own words (the current one is 5 sentences; keep it short), plus the experience credits and the stack I actually use: Python, FastAPI, TypeScript, React Native (Expo), PostgreSQL, Redis, Docker, AWS (EC2/ECS), pytest.
+6. **Let's talk:** the same lamp-lit room as the reel, not a new theme. Wallpaper: an original repeating 70s flower pattern in muted orange, dusty slate and dull cream on chocolate (deep brown in dark mode), low contrast, with grain. Big wavy "Let's talk" in cream with orange/mustard offsets sits straight on it, with "Open to new-grad roles starting June 2027." in cream below (cream passes 4.5:1 on every wallpaper ink; grain fades out behind the title band). Below: a dark, warm cork board in a dark walnut frame under a warm lamp glow, with at most 7 pinned items in muted pins, tape or a clothespin, each slightly rotated: the gig poster (below), the email note, the LinkedIn index card, the GitHub polaroid, the resume sheet, the "ADMIT ONE · Shoot Me a Message" ticket, and a small vinyl record showing the label of whatever is on the turntable (same `RecordLabels.astro` renderer; follows the turntable's `turntable:record` event). Every link item is a real `<a>` with an accessible name, visible focus, 44px+ target and passing contrast; on hover/focus it lifts and straightens while its pin stays put (no lift under reduced motion). Under 600px the board is a tidy 2-column grid with smaller rotations.
+   - **The gig poster** (the board's centerpiece): an original 1970s-style illustrated space scene, inspired by the style of retro space/travel posters and copying none. A deep muted green sky with cream and mustard stars, soft sun-ray stripes and a few small orange planets; a large orange "brain planet" whose surface is stylized brain folds drawn like a gas giant's bands, with mustard and cream highlights; layered rolling clouds and hills in greens, cream and mustard with orange-and-cream flowers; a small cream-and-orange rocket launching out of the clouds toward the planet on a flame trail (brain = figuring things out, rocket = shipping); a thin ornate mustard border with decorative corners. Hot pink only as a small accent. Screen-print feel: grain and slight misregistration. The art is one static SVG (`public/textures/poster-space.svg`, from `npm run poster-art`); nothing live. Text is HTML on solid cream so every line passes contrast: a "NOW BOOKING" tag, "HOLDEN ANDERSON" in the wavy lettering on a curvy ribbon banner, and "STARTING JUNE 2027 · Backend · Infrastructure · AI engineering" on a cream band.
+7. **Footer strip:** a small colophon: "© 2026 Holden Anderson. No cookies, no analytics." (no "built with" credit).
 
 ### Project pages (`/projects/[slug]`), the "liner notes"
 

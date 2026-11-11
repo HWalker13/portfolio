@@ -1,0 +1,585 @@
+---
+/*
+  "Let's talk": a corkboard in a dark walnut frame, hung on original 70s flower wallpaper.
+  The wallpaper is the project reel's chocolate with a muted, low-contrast repeat, so this reads
+  as the same lamp-lit room, not a new theme. The title sits right on it, like the project titles.
+
+  Seven pinned items, each slightly rotated (--rot). Every link item is a real <a> with an
+  accessible name, a 44px+ tap target and a visible focus ring. On hover/focus the paper lifts
+  and straightens; the pin, tape or clip is a sibling of the paper, so it stays put.
+  Under 600px the board becomes a tidy 2-column grid with smaller rotations.
+  Reduced motion: the hover state still straightens, but nothing animates or lifts.
+
+  Grain sits on the wallpaper and the cork only. The title block clears a patch of plain
+  chocolate (no flowers, no grain) under the letters, and every paper item is a clean solid
+  surface, so text never sits on texture. A warm lamp lights the cork; dimmer in dark mode.
+*/
+import { site } from '../data/site';
+import GigPoster from './GigPoster.astro';
+import PinnedRecord from './PinnedRecord.astro';
+import WavyTitle from './WavyTitle.astro';
+import MeltFilter from './MeltFilter.astro';
+const mailto = `mailto:${site.links.email}`;
+// On a narrow note the address may wrap, but only after the @ (via <wbr>), never mid-word.
+const [emailUser, emailDomain] = site.links.email.split('@');
+---
+
+<section class="talk" id="contact" aria-labelledby="talk-title">
+  <span class="grain" aria-hidden="true"></span>
+  <MeltFilter />
+
+  <div class="container talk-inner">
+    <div class="talk-head">
+      <WavyTitle as="h2" id="talk-title" text="Let's talk" class="talk-title" />
+      <p class="open">Open to new-grad roles starting June 2027.</p>
+    </div>
+
+    <div class="frame">
+      <div class="board">
+        <span class="cork-grain grain" aria-hidden="true"></span>
+        <span class="lamp" aria-hidden="true"></span>
+        <ul class="items">
+          <li class="item item--poster" style="--rot:-1.5deg">
+            <span class="pin pin--orange pin--left" aria-hidden="true"></span>
+            <span class="pin pin--slate pin--right" aria-hidden="true"></span>
+            <div class="paper"><GigPoster /></div>
+          </li>
+
+          <li class="item item--email" style="--rot:-4deg">
+            <span class="pin pin--slate" aria-hidden="true"></span>
+            <a class="paper note" href={mailto}>
+              <span class="note-hi" aria-hidden="true">Drop me a line</span>
+              <span class="visually-hidden">Email: </span>
+              <span class="note-addr">
+                {emailUser}@<wbr />{emailDomain}
+              </span>
+            </a>
+          </li>
+
+          <li class="item item--linkedin" style="--rot:3deg">
+            <span class="tape" aria-hidden="true"></span>
+            <a class="paper index" href={site.links.linkedin}>
+              <span class="in" aria-hidden="true">in</span>
+              <span class="index-label">LinkedIn</span>
+            </a>
+          </li>
+
+          <li class="item item--github" style="--rot:4deg">
+            <span class="clip" aria-hidden="true"></span>
+            <a class="paper polaroid" href={site.links.github}>
+              <span class="snap" aria-hidden="true">
+                <svg viewBox="0 0 100 100">
+                  <path class="brace" d="M38 22 Q26 22 26 34 V44 Q26 50 18 50 Q26 50 26 56 V66 Q26 78 38 78" />
+                  <path class="brace" d="M62 22 Q74 22 74 34 V44 Q74 50 82 50 Q74 50 74 56 V66 Q74 78 62 78" />
+                  <circle cx="50" cy="50" r="13" class="disc" />
+                  <circle cx="50" cy="50" r="4.5" class="disc-label" />
+                </svg>
+              </span>
+              <span class="polaroid-label">GitHub</span>
+            </a>
+          </li>
+
+          <li class="item item--resume" style="--rot:-3deg">
+            <span class="pin pin--mustard" aria-hidden="true"></span>
+            <a class="paper sheet" href={site.links.resume}>
+              <span class="sheet-head" aria-hidden="true">{site.name}</span>
+              <span class="sheet-lines" aria-hidden="true"></span>
+              <span class="sheet-label">Resume <span class="pdf">(PDF)</span></span>
+            </a>
+          </li>
+
+          <li class="item item--ticket" style="--rot:5deg">
+            <span class="pin pin--orange" aria-hidden="true"></span>
+            <a class="paper ticket" href={mailto}>
+              <span class="admit">Admit one</span>
+              <span class="ticket-text">Shoot Me a Message</span>
+              <span class="visually-hidden"> (email)</span>
+            </a>
+          </li>
+
+          <li class="item item--mini" style="--rot:-6deg" aria-hidden="true">
+            <span class="pin pin--orange" aria-hidden="true"></span>
+            <div class="paper vinyl"><PinnedRecord /></div>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  /*
+    The handwriting face (Caveat, 73 KB) is only applied once the board is within 800px of the
+    viewport. Chrome fetches a web font as soon as any rendered text uses it, wherever it is on
+    the page, so applying it up front put it in the critical path of the first paint.
+  */
+  const talk = document.getElementById('contact');
+  if (talk && 'IntersectionObserver' in window) {
+    const io = new IntersectionObserver(
+      ([e]) => {
+        if (!e.isIntersecting) return;
+        talk.classList.add('hand-ready');
+        io.disconnect();
+      },
+      { rootMargin: '800px 0px' },
+    );
+    io.observe(talk);
+  } else talk?.classList.add('hand-ready');
+</script>
+
+<style>
+  /* Until .hand-ready, handwritten bits use a system script face (see the script above) */
+  .talk {
+    --hand: 'Bradley Hand', 'Segoe Print', cursive;
+  }
+  .talk:global(.hand-ready) {
+    --hand: var(--font-hand);
+  }
+  .talk {
+    position: relative;
+    isolation: isolate;
+    padding-block: var(--space-6);
+    background: var(--wallpaper) 0 0 / 162px 162px repeat, var(--wallpaper-bg);
+    color: var(--item-ink);
+  }
+  /* No grain behind the title band: fade it in below the heading */
+  .talk > .grain {
+    --clear: calc(var(--space-6) + clamp(2.6rem, 1.6rem + 6vw, 6.5rem) * 1.2 + 5rem);
+    -webkit-mask-image: linear-gradient(transparent 0 var(--clear), #000 calc(var(--clear) + 2.5rem));
+    mask-image: linear-gradient(transparent 0 var(--clear), #000 calc(var(--clear) + 2.5rem));
+  }
+  .talk-inner {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-5);
+  }
+
+  /* ── Title, straight on the wallpaper ───────────────────────────────── */
+  /*
+    The wallpaper inks are muted enough that cream passes 4.5:1 on every one of them
+    (npm run contrast checks each), so the type sits straight on the pattern. The grain fades
+    out over this top band (see .talk > .grain), so it never sits behind the letters.
+  */
+  .talk-head {
+    justify-self: center;
+    max-width: min(40rem, 100%);
+    text-align: center;
+    color: var(--talk-text);
+  }
+  .talk-head :global(.talk-title) {
+    justify-content: center;
+    font-size: clamp(2.6rem, 1.6rem + 6vw, 6.5rem);
+    /* Like the hero name: cream letters with stacked 70s offsets */
+    color: var(--talk-text);
+    text-shadow:
+      0.04em 0.04em 0 var(--talk-shadow-1),
+      0.08em 0.08em 0 var(--talk-shadow-2);
+  }
+  .open {
+    margin: var(--space-3) auto 0;
+    font-size: var(--step-1);
+    font-weight: 600;
+  }
+
+  /* ── Frame and cork ──────────────────────────────────────────────────── */
+  .frame {
+    padding: clamp(10px, 1.6vw, 18px);
+    border-radius: 12px;
+    background:
+      repeating-linear-gradient(
+        92deg,
+        rgb(0 0 0 / 0) 0 6px,
+        rgb(0 0 0 / 0.1) 6px 7px,
+        rgb(255 255 255 / 0.05) 7px 11px,
+        rgb(0 0 0 / 0) 11px 19px
+      ),
+      linear-gradient(var(--frame-top), var(--frame-bottom));
+    box-shadow:
+      0 1px 0 rgb(255 255 255 / 0.18) inset,
+      0 24px 50px -18px rgb(0 0 0 / 0.6);
+  }
+  .board {
+    position: relative;
+    isolation: isolate;
+    padding: clamp(1.25rem, 3vw, 2.75rem);
+    border-radius: 4px;
+    background: var(--cork) 0 0 / 160px 160px repeat, var(--cork-bg);
+    box-shadow: inset 0 0 0 2px rgb(0 0 0 / 0.25), inset 0 6px 18px rgb(0 0 0 / 0.35);
+  }
+  /* A warm lamp over the board: a pool of amber light, falling off to shadow at the frame */
+  .lamp {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse 70% 62% at 50% 38%,
+      rgb(255 176 90 / var(--lamp-warm)) 0%,
+      rgb(255 176 90 / 0) 55%,
+      rgb(20 10 4 / var(--lamp-shadow)) 100%
+    );
+  }
+
+  /* ── Layout ──────────────────────────────────────────────────────────── */
+  .items {
+    position: relative;
+    z-index: 1;
+    list-style: none;
+    padding: 0;
+    display: grid;
+    gap: clamp(1.25rem, 3vw, 2.5rem) clamp(1rem, 2.5vw, 2rem);
+    /* minmax(0, …): a column never grows past its share to fit a long word or the fallback font */
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      'poster poster'
+      'email github'
+      'linkedin resume'
+      'ticket mini';
+    align-items: center;
+    justify-items: center;
+  }
+  @media (min-width: 960px) {
+    .items {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr) minmax(0, 1fr);
+      grid-template-areas:
+        'email poster github'
+        'linkedin poster resume'
+        'ticket poster mini';
+    }
+  }
+  .item--poster {
+    grid-area: poster;
+    width: min(100%, 23rem);
+  }
+  .item--email {
+    grid-area: email;
+  }
+  .item--linkedin {
+    grid-area: linkedin;
+  }
+  .item--github {
+    grid-area: github;
+  }
+  .item--resume {
+    grid-area: resume;
+  }
+  .item--ticket {
+    grid-area: ticket;
+  }
+  .item--mini {
+    grid-area: mini;
+  }
+  /* Phones: a tidy 2-column grid, so rotations get smaller */
+  @media (max-width: 599px) {
+    .item {
+      --rot-scale: 0.45;
+    }
+  }
+
+  /* ── Items: shared lift and straighten ───────────────────────────────── */
+  .item {
+    --rot-scale: 1;
+    position: relative;
+    max-width: 100%;
+  }
+  .paper {
+    position: relative;
+    display: block;
+    transform: rotate(calc(var(--rot) * var(--rot-scale)));
+    box-shadow:
+      0 1px 1px rgb(0 0 0 / 0.25),
+      0 8px 14px -6px rgb(0 0 0 / 0.5);
+    text-decoration: none;
+    color: var(--item-ink);
+    transition:
+      transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
+      box-shadow 220ms ease;
+  }
+  a.paper {
+    min-height: 44px;
+  }
+  .item:hover .paper,
+  .paper:focus-visible {
+    transform: translateY(-6px) rotate(0deg);
+    box-shadow:
+      0 2px 3px rgb(0 0 0 / 0.2),
+      0 18px 26px -10px rgb(0 0 0 / 0.55);
+  }
+  .paper:focus-visible {
+    outline: 3px solid var(--deep-brown);
+    outline-offset: 4px;
+    box-shadow:
+      0 0 0 7px var(--cream),
+      0 18px 26px -10px rgb(0 0 0 / 0.55);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .paper {
+      transition: none;
+    }
+    /* No lift: only straighten, instantly, so the focused item is easy to spot */
+    .item:hover .paper,
+    .paper:focus-visible {
+      transform: rotate(0deg);
+    }
+  }
+
+  /* ── Fasteners (siblings of the paper, so they stay put) ─────────────── */
+  .pin {
+    position: absolute;
+    z-index: 2;
+    top: -9px;
+    left: calc(50% - 9px);
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, rgb(255 255 255 / 0.7) 0 2px, transparent 3px), var(--pin);
+    box-shadow:
+      inset -2px -3px 0 rgb(0 0 0 / 0.25),
+      2px 4px 3px rgb(0 0 0 / 0.4);
+  }
+  /* Pins in muted palette colors, so they sit in the same light as the board */
+  .pin--orange {
+    --pin: var(--pin-orange);
+  }
+  .pin--slate {
+    --pin: var(--pin-slate);
+  }
+  .pin--mustard {
+    --pin: var(--pin-mustard);
+  }
+  .pin--left {
+    left: 12%;
+  }
+  .pin--right {
+    left: auto;
+    right: 12%;
+  }
+  .tape {
+    position: absolute;
+    z-index: 2;
+    top: -12px;
+    left: calc(50% - 38px);
+    width: 76px;
+    height: 24px;
+    background: rgb(243 230 204 / 0.72);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 0.2);
+    transform: rotate(-4deg);
+    -webkit-mask-image: linear-gradient(90deg, transparent 0 2px, #000 2px calc(100% - 2px), transparent calc(100% - 2px));
+    mask-image: linear-gradient(90deg, transparent 0 2px, #000 2px calc(100% - 2px), transparent calc(100% - 2px));
+  }
+  /* A wooden clothespin, clipped over the top edge */
+  .clip {
+    position: absolute;
+    z-index: 2;
+    top: -22px;
+    left: calc(50% - 8px);
+    width: 16px;
+    height: 46px;
+    border-radius: 4px;
+    background:
+      linear-gradient(90deg, rgb(0 0 0 / 0.18) 0 1px, transparent 1px 7px, rgb(0 0 0 / 0.25) 7px 9px, transparent 9px),
+      linear-gradient(#e2bf88, #c99a5d);
+    box-shadow: 2px 3px 3px rgb(0 0 0 / 0.35);
+  }
+  .clip::after {
+    content: '';
+    position: absolute;
+    left: -2px;
+    right: -2px;
+    top: 16px;
+    height: 5px;
+    border-radius: 2px;
+    background: #9a9a9e;
+  }
+
+  /* ── Poster ──────────────────────────────────────────────────────────── */
+  .item--poster .paper {
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  /* ── Email: torn notebook paper ──────────────────────────────────────── */
+  .note {
+    width: min(15rem, 100%);
+    padding: 1.6rem 1rem 1.1rem 1.6rem;
+    background:
+      linear-gradient(90deg, transparent 1.05rem, var(--burnt-orange) 1.05rem 1.15rem, transparent 1.15rem),
+      repeating-linear-gradient(transparent 0 1.55rem, var(--note-rule) 1.55rem calc(1.55rem + 1px)),
+      var(--paper);
+    background-position: 0 0, 0 0.55rem, 0 0;
+    font-family: var(--hand);
+    line-height: 1.55rem;
+    /* Torn top edge */
+    clip-path: polygon(
+      0 6px, 6% 1px, 12% 7px, 19% 2px, 26% 6px, 33% 0, 41% 5px, 48% 1px, 56% 6px, 63% 2px, 71% 7px,
+      78% 1px, 86% 5px, 93% 0, 100% 6px, 100% 100%, 0 100%
+    );
+  }
+  .note-hi {
+    display: block;
+    font-size: 1.45rem;
+    font-weight: 700;
+  }
+  .note-addr {
+    display: block;
+    font-size: clamp(1.1rem, 0.9rem + 1vw, 1.3rem);
+    font-weight: 700;
+    overflow-wrap: normal;
+    text-decoration: underline;
+    text-decoration-color: var(--burnt-orange);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+
+  /* ── LinkedIn: index card ────────────────────────────────────────────── */
+  .index {
+    display: grid;
+    justify-items: start;
+    gap: 0.2rem;
+    width: min(12rem, 100%);
+    padding: 0.9rem 1rem 0.8rem;
+    background:
+      linear-gradient(transparent 2.6rem, var(--burnt-orange) 2.6rem calc(2.6rem + 2px), transparent calc(2.6rem + 2px)),
+      repeating-linear-gradient(transparent 0 1.25rem, var(--note-rule) 1.25rem calc(1.25rem + 1px)) 0 2.6rem / 100% 100%
+        no-repeat,
+      var(--paper);
+  }
+  .in {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: 2.2rem;
+    line-height: 1;
+    color: var(--slate-ink);
+  }
+  .index-label {
+    margin-top: 0.6rem;
+    font-weight: 700;
+    font-size: 1.05rem;
+  }
+
+  /* ── GitHub: polaroid ────────────────────────────────────────────────── */
+  .polaroid {
+    width: min(11rem, 100%);
+    padding: 0.6rem 0.6rem 0.4rem;
+    background: var(--paper);
+    text-align: center;
+  }
+  .snap {
+    display: block;
+    aspect-ratio: 1;
+    background: var(--slate);
+  }
+  .snap svg {
+    width: 100%;
+    height: 100%;
+  }
+  .brace {
+    fill: none;
+    stroke: var(--cream);
+    stroke-width: 6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .disc {
+    fill: var(--deep-brown);
+  }
+  .disc-label {
+    fill: var(--burnt-orange);
+  }
+  .polaroid-label {
+    display: block;
+    padding-top: 0.3rem;
+    font-family: var(--hand);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+
+  /* ── Resume: typed sheet ─────────────────────────────────────────────── */
+  .sheet {
+    display: grid;
+    gap: 0.5rem;
+    width: min(11.5rem, 100%);
+    padding: 1.1rem 0.9rem 0.9rem;
+    background: var(--paper);
+    font-family: var(--font-mono);
+  }
+  .sheet-head {
+    font-weight: 700;
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 2px solid var(--item-ink);
+    padding-bottom: 0.3rem;
+  }
+  /* Typed lines, as shapes, not text: nothing on the page pretends to be resume content */
+  .sheet-lines {
+    height: 4.2rem;
+    background:
+      linear-gradient(90deg, rgb(59 35 20 / 0.28) 0 70%, transparent 70%) 0 0 / 100% 8px no-repeat,
+      linear-gradient(90deg, rgb(59 35 20 / 0.22) 0 92%, transparent 92%) 0 16px / 100% 6px no-repeat,
+      linear-gradient(90deg, rgb(59 35 20 / 0.22) 0 84%, transparent 84%) 0 28px / 100% 6px no-repeat,
+      linear-gradient(90deg, rgb(59 35 20 / 0.28) 0 55%, transparent 55%) 0 44px / 100% 8px no-repeat,
+      linear-gradient(90deg, rgb(59 35 20 / 0.22) 0 88%, transparent 88%) 0 60px / 100% 6px no-repeat;
+  }
+  .sheet-label {
+    font-weight: 700;
+    font-size: 0.95rem;
+    text-decoration: underline;
+    text-decoration-color: var(--burnt-orange);
+    text-decoration-thickness: 2px;
+    text-underline-offset: 3px;
+  }
+  .pdf {
+    font-weight: 500;
+  }
+
+  /* ── Ticket stub ─────────────────────────────────────────────────────── */
+  .ticket {
+    display: grid;
+    gap: 0.15rem;
+    width: min(13rem, 100%);
+    padding: 0.8rem 1.4rem;
+    background: var(--ticket-bg);
+    text-align: center;
+    /* Punched notches on both short ends, and a perforation line */
+    -webkit-mask:
+      radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px) left / 51% 100% no-repeat,
+      radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px) right / 51% 100% no-repeat;
+    mask:
+      radial-gradient(circle at 0 50%, transparent 9px, #000 9.5px) left / 51% 100% no-repeat,
+      radial-gradient(circle at 100% 50%, transparent 9px, #000 9.5px) right / 51% 100% no-repeat;
+    border-block: 2px dashed rgb(59 35 20 / 0.45);
+  }
+  .admit {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.24em;
+    text-transform: uppercase;
+  }
+  .ticket-text {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: 1.2rem;
+    line-height: 1.1;
+  }
+
+  /* ── Pinned record ───────────────────────────────────────────────────── */
+  .item--mini {
+    width: min(9rem, 100%);
+  }
+  .vinyl {
+    width: 100%;
+    border-radius: 50%;
+    background: none;
+    box-shadow: 0 10px 14px -6px rgb(0 0 0 / 0.6);
+  }
+  .item:hover .vinyl {
+    box-shadow: 0 18px 24px -10px rgb(0 0 0 / 0.6);
+  }
+</style>

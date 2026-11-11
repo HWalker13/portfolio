@@ -1,0 +1,383 @@
+---
+/*
+  Projects reel: one section per screen, on chocolate, with a thick orange / mustard / brown
+  supergraphic wave flowing down behind them.
+
+  Left: giant name, one line, 2 stats, proof links, and a "01 / 04" counter with up/down buttons.
+  Right (desktop, motion OK): a curved wheel of demo cards in a sticky column. Native page scroll
+  drives it (src/scripts/reel.ts): the script reads scrollY and rotates the wheel, it never
+  scrolls the page itself. Under 768px or with reduced motion, the wheel is hidden and each
+  section shows its own flat card instead.
+
+  Text sits on clean chocolate panels above the grain; the grain only shows on the open field
+  and the wave.
+*/
+import { getCollection } from 'astro:content';
+import ProofLinks from './ProofLinks.astro';
+import VideoCard from './VideoCard.astro';
+
+const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
+const n = projects.length;
+const pad = (i: number) => String(i).padStart(2, '0');
+
+/*
+  The wave: one path snaking down the right half, one S-bend per section. The SVG stretches to
+  the reel (preserveAspectRatio="none") and the strokes don't scale, so the bands stay the same
+  thickness at any height. Five stacked strokes of decreasing width make the stripes:
+  orange, a gap, mustard, a gap, brown in the middle.
+*/
+let wave = 'M74 -4';
+for (let i = 0; i < n; i++) {
+  const y = i * 100;
+  wave += ` C108 ${y + 30} 46 ${y + 64} 78 ${y + 100}`;
+}
+wave += ` L78 ${n * 100 + 4}`;
+const STROKES = [
+  ['var(--wave-1)', 120],
+  ['var(--reel-bg)', 90],
+  ['var(--wave-2)', 74],
+  ['var(--reel-bg)', 44],
+  ['var(--wave-3)', 30],
+] as const;
+---
+
+<section class="reel" id="projects" aria-labelledby="projects-title" data-reel>
+  <svg class="wave" viewBox={`0 0 100 ${n * 100}`} preserveAspectRatio="none" aria-hidden="true">
+    {STROKES.map(([color, w]) => <path d={wave} style={`stroke:${color}`} stroke-width={w} />)}
+  </svg>
+  <span class="grain" aria-hidden="true"></span>
+
+  <h2 id="projects-title" class="visually-hidden">Projects</h2>
+
+  <div class="reel-grid container">
+    <div class="wheel-col">
+      <div class="wheel" data-wheel>
+        <div class="wheel-stage">
+          {projects.map((entry, i) => <VideoCard entry={entry} index={i} variant="wheel" />)}
+        </div>
+      </div>
+    </div>
+
+    {
+      projects.map((entry, i) => {
+        const { title, subtitle, side, track, tagline, headlineStats, proof } = entry.data;
+        const prev = i === 0 ? { id: 'tracklist', label: 'Back to the tracklist' } : { id: projects[i - 1].id, label: `Previous project: ${projects[i - 1].data.title}` };
+        const next = i === n - 1 ? { id: 'about', label: 'Next: about me' } : { id: projects[i + 1].id, label: `Next project: ${projects[i + 1].data.title}` };
+        return (
+          <article class="proj" id={entry.id} aria-labelledby={`${entry.id}-title`} data-proj={i}>
+            <div class="panel">
+              <div class="counter">
+                <p class="count">
+                  <span class="visually-hidden">Project {i + 1} of {n}</span>
+                  <span aria-hidden="true">
+                    <b>{pad(i + 1)}</b> / {pad(n)}
+                  </span>
+                </p>
+                <button type="button" class="step" data-go={prev.id} aria-label={prev.label}>
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M4 13 L10 7 L16 13" />
+                  </svg>
+                </button>
+                <button type="button" class="step" data-go={next.id} aria-label={next.label}>
+                  <svg viewBox="0 0 20 20" aria-hidden="true">
+                    <path d="M4 7 L10 13 L16 7" />
+                  </svg>
+                </button>
+                <span class="side" aria-hidden="true">
+                  Side {side} · Track {track}
+                </span>
+              </div>
+
+              <h3 id={`${entry.id}-title`} tabindex="-1">
+                {title}
+              </h3>
+              {subtitle && <p class="subtitle">{subtitle}</p>}
+              <p class="line">{tagline}</p>
+
+              <ul class="stats">
+                {headlineStats.map((s) => (
+                  <li>
+                    {s.lead && <span class="context">{s.lead} </span>}
+                    <span class="value">{s.value}</span>
+                    {/^[,.;:]/.test(s.context) ? '' : ' '}
+                    <span class="context">{s.context}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <div class="links">
+                <ProofLinks project={title} proof={proof} />
+                <a class="notes" href={`/projects/${entry.id}/`}>
+                  Liner notes<span class="visually-hidden"> for {title}</span>
+                </a>
+              </div>
+            </div>
+
+            <div class="inline-card">
+              <VideoCard entry={entry} index={i} variant="inline" />
+            </div>
+          </article>
+        );
+      })
+    }
+  </div>
+</section>
+
+<script>
+  import { startReel } from '../scripts/reel';
+  startReel();
+</script>
+
+<style>
+  .reel {
+    --focus: var(--reel-focus);
+    --link: var(--reel-text);
+    --link-hover: var(--reel-accent);
+    position: relative;
+    isolation: isolate;
+    background: var(--reel-bg);
+    color: var(--reel-text);
+    overflow-x: clip;
+  }
+
+  /* ── Wave ────────────────────────────────────────────────────────────── */
+  .wave {
+    position: absolute;
+    z-index: 0;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    pointer-events: none;
+  }
+  .wave path {
+    fill: none;
+    stroke-linecap: butt;
+    vector-effect: non-scaling-stroke;
+  }
+  @media (min-width: 768px) {
+    .wave {
+      display: block;
+    }
+  }
+
+  .reel-grid {
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── Project sections ────────────────────────────────────────────────── */
+  .proj {
+    display: grid;
+    gap: var(--space-4);
+    align-content: center;
+    padding-block: var(--space-6);
+  }
+  /* Phones: a three-band stripe between sections stands in for the wave */
+  .proj + .proj {
+    border-top: 0;
+    background:
+      linear-gradient(
+          var(--wave-1) 0 8px,
+          transparent 8px 12px,
+          var(--wave-2) 12px 20px,
+          transparent 20px 24px,
+          var(--wave-3) 24px 32px,
+          transparent 32px
+        )
+        0 0 / 100% 32px no-repeat;
+  }
+  .panel {
+    /* Clean chocolate under the text, so the grain never sits behind it */
+    background: var(--reel-bg);
+    border-radius: var(--radius);
+    padding: var(--space-3) 0;
+  }
+  @media (min-width: 768px) {
+    .proj {
+      min-height: 100svh;
+      padding-block: var(--space-6);
+    }
+    .proj + .proj {
+      background: none;
+    }
+    .panel {
+      padding: var(--space-4);
+      margin-left: calc(-1 * var(--space-4));
+      max-width: 36rem;
+    }
+  }
+
+  /* Desktop with motion: text left, sticky wheel right, no inline cards */
+  @media (min-width: 768px) and (prefers-reduced-motion: no-preference) {
+    .reel-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+      column-gap: var(--space-5);
+    }
+    .proj {
+      grid-column: 1;
+    }
+    .wheel-col {
+      grid-column: 2;
+      grid-row: 1 / span 4;
+    }
+    .inline-card {
+      display: none;
+    }
+  }
+  /* Phones, and reduced motion at any size: no wheel, each section has its own flat card */
+  @media (max-width: 767px), (prefers-reduced-motion: reduce) {
+    .wheel-col {
+      display: none;
+    }
+  }
+  /* Reduced motion on a wide screen: text and card side by side, still one section per screen */
+  @media (min-width: 768px) and (prefers-reduced-motion: reduce) {
+    .proj {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      column-gap: var(--space-5);
+      align-items: center;
+    }
+  }
+
+  .counter {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+  }
+  .count {
+    margin-right: 0.35rem;
+    font-size: var(--step-0);
+    color: var(--reel-muted);
+  }
+  .count b {
+    color: var(--reel-accent);
+    font-weight: 700;
+  }
+  .step {
+    display: grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 2px solid var(--reel-muted);
+    border-radius: 50%;
+    background: var(--reel-bg);
+    color: var(--reel-text);
+    cursor: pointer;
+  }
+  .step:hover {
+    background: var(--reel-accent);
+    border-color: var(--reel-accent);
+    color: var(--chocolate);
+  }
+  .step svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2.6;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .side {
+    margin-left: auto;
+    font-size: var(--step--1);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--reel-muted);
+  }
+
+  h3 {
+    margin-top: var(--space-4);
+    font-size: clamp(2.6rem, 1.4rem + 5vw, 5.6rem);
+    font-weight: 900;
+    line-height: 0.95;
+    letter-spacing: -0.02em;
+    color: var(--reel-text);
+    text-wrap: balance;
+  }
+  h3:focus {
+    outline: none;
+  }
+  .subtitle {
+    margin-top: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--reel-muted);
+  }
+  .line {
+    margin-top: var(--space-3);
+    font-size: var(--step-1);
+    line-height: 1.4;
+  }
+  .stats {
+    list-style: none;
+    padding: 0;
+    margin-top: var(--space-4);
+    display: grid;
+    gap: var(--space-2);
+  }
+  .stats li {
+    line-height: 1.45;
+  }
+  .value {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 1.15em;
+    font-variant-numeric: tabular-nums;
+    color: var(--reel-accent);
+  }
+  .context {
+    color: var(--reel-muted);
+  }
+  .links {
+    margin-top: var(--space-4);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 1.1rem;
+  }
+  .links :global(a),
+  .notes {
+    color: var(--reel-text);
+    text-decoration-color: var(--burnt-orange);
+    text-decoration-thickness: 0.12em;
+  }
+  .links :global(a:hover) {
+    color: var(--reel-accent);
+  }
+  .notes {
+    display: inline-block;
+    padding-block: 0.35rem;
+    font-size: var(--step--1);
+    font-weight: 700;
+  }
+
+  /* ── Wheel ───────────────────────────────────────────────────────────── */
+  .wheel {
+    position: sticky;
+    top: 0;
+    height: 100svh;
+    display: grid;
+    place-items: center;
+    perspective: 1100px;
+    perspective-origin: 50% 50%;
+  }
+  .wheel-stage {
+    position: relative;
+    width: min(100%, 34rem);
+    aspect-ratio: 16 / 10;
+    transform-style: preserve-3d;
+  }
+  .wheel-stage > :global(.vcard) {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    will-change: transform, opacity, filter;
+    transform-origin: 50% 50%;
+  }
+</style>

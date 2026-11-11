@@ -1,0 +1,23 @@
+---
+/*
+  The static "melt" filter used by WavyTitle: low-frequency noise displaces the letter edges a
+  few pixels, so the type looks like ink that ran on the press. Defined once per page.
+  Not display:none (that disables filters in some browsers), just zero-size and out of the way.
+*/
+---
+
+<svg class="melt-defs" width="0" height="0" aria-hidden="true" focusable="false">
+  <filter id="melt" x="-5%" y="-15%" width="110%" height="135%" color-interpolation-filters="sRGB">
+    <feTurbulence type="fractalNoise" baseFrequency="0.011 0.045" numOctaves="2" seed="7" result="noise"></feTurbulence>
+    <feDisplacementMap in="SourceGraphic" in2="noise" scale="6" xChannelSelector="R" yChannelSelector="G"></feDisplacementMap>
+  </filter>
+</svg>
+
+<style>
+  .melt-defs {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+  }
+</style>

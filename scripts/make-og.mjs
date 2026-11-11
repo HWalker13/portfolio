@@ -1,6 +1,6 @@
 /*
   Renders scripts/og/card.html to public/og.jpg (1200 × 630) in headless Chrome.
-  JPEG, not PNG: the rug's fiber noise makes a PNG ~640 KB.
+  JPEG, not PNG: the print grain makes a PNG several times larger.
   Why a browser: the card uses the site's web fonts (Fraunces with its SOFT axis),
   which SVG rasterizers like sharp/librsvg can't load.
   Needs a local Chrome. Set CHROME_PATH if it isn't in the default macOS location.

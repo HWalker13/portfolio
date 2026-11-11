@@ -1,0 +1,202 @@
+---
+/*
+  A demo card for the project reel. Two variants of the same card:
+    wheel  - on the curved wheel (desktop, motion OK). Transforms are set by src/scripts/reel.ts.
+    inline - flat, inside the project's own section (phones, and everyone with reduced motion).
+
+  With a video: muted, looped, playsinline, preload="none" (nothing downloads until it plays),
+  with a poster frame and a real Play/Pause button.
+  Without one (until Stage 3): a styled placeholder with the project name.
+
+  Layers, bottom to top: poster (image or placeholder art), video, fringe, button.
+  The chromatic-aberration fringe is a static red/cyan edge shadow whose opacity the wheel
+  sets per frame (opacity only, so it's free on the compositor). It's never applied to the
+  live video, only to the card edge around the poster layer, and only off-focus.
+*/
+import type { CollectionEntry } from 'astro:content';
+
+interface Props {
+  entry: CollectionEntry<'projects'>;
+  index: number;
+  variant: 'wheel' | 'inline';
+}
+const { entry, index, variant } = Astro.props;
+const { title, video } = entry.data;
+
+// Placeholder inks: each a field deep brown text passes on (≥4.9:1), plus two accent stripes.
+const LOOKS = [
+  { bg: 'var(--burnt-orange)', a: 'var(--mustard)', b: 'var(--cream)' },
+  { bg: 'var(--mustard)', a: 'var(--burnt-orange)', b: 'var(--chocolate)' },
+  { bg: 'var(--powder)', a: 'var(--slate)', b: 'var(--burnt-orange)' },
+  { bg: 'var(--cream)', a: 'var(--avocado)', b: 'var(--mustard)' },
+];
+const look = LOOKS[index % LOOKS.length];
+const num = String(index + 1).padStart(2, '0');
+---
+
+<figure
+  class:list={['vcard', `vcard--${variant}`, video && `vcard--${video.frame}`]}
+  data-card={index}
+  data-variant={variant}
+  style={`--ph-bg:${look.bg};--ph-a:${look.a};--ph-b:${look.b}`}
+>
+  <div class="poster-layer" aria-hidden="true">
+    {
+      video ? (
+        <img src={video.poster} alt="" loading="lazy" decoding="async" />
+      ) : (
+        <div class="ph">
+          <span class="ph-stripes" />
+          <span class="ph-num">{num}</span>
+          <span class="ph-name">{title}</span>
+          <span class="ph-note">Demo video coming soon</span>
+        </div>
+      )
+    }
+  </div>
+  {
+    video && (
+      <>
+        <video muted loop playsinline preload="none" poster={video.poster} aria-label={`Demo of ${title}`}>
+          {video.webm && <source src={video.webm} type="video/webm" />}
+          <source src={video.mp4} type="video/mp4" />
+        </video>
+        <button class="vplay" type="button" data-play aria-pressed="false">
+          <span class="vplay-icon" aria-hidden="true" />
+          <span class="vplay-text">Play</span>
+          <span class="visually-hidden"> {title} demo</span>
+        </button>
+      </>
+    )
+  }
+  <span class="fringe" aria-hidden="true"></span>
+</figure>
+
+<style>
+  .vcard {
+    position: relative;
+    margin: 0;
+    aspect-ratio: 16 / 10;
+    border-radius: 18px;
+    overflow: hidden;
+    background: var(--ph-bg);
+    box-shadow:
+      0 0 0 3px var(--deep-brown),
+      0 26px 50px -22px rgb(0 0 0 / 0.7);
+  }
+  .poster-layer,
+  .poster-layer img,
+  video,
+  .ph {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+  .poster-layer img,
+  video {
+    object-fit: cover;
+  }
+  /* Phone recordings: letterboxed inside a phone outline on the card's field */
+  .vcard--phone video,
+  .vcard--phone .poster-layer img {
+    object-fit: contain;
+    padding: 6% 0;
+  }
+
+  /* ── Placeholder ─────────────────────────────────────────────────────── */
+  .ph {
+    display: grid;
+    align-content: end;
+    padding: clamp(1rem, 4%, 1.6rem);
+    color: var(--deep-brown);
+  }
+  /* A corner supergraphic: three quarter-circle bands in the top right */
+  .ph-stripes {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 58%;
+    aspect-ratio: 1;
+    background: radial-gradient(
+      circle at 100% 0,
+      var(--ph-a) 0 18%,
+      transparent 18.5% 26%,
+      var(--ph-b) 26.5% 38%,
+      transparent 38.5% 46%,
+      var(--ph-a) 46.5% 58%,
+      transparent 58.5%
+    );
+  }
+  .ph-num {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 0.85rem;
+  }
+  .ph-name {
+    position: relative;
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 900;
+    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    line-height: 1;
+    text-wrap: balance;
+  }
+  .ph-note {
+    margin-top: 0.4rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  /* ── Fringe (off-focus only; the wheel drives its opacity) ───────────── */
+  .fringe {
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    box-shadow:
+      inset 5px 0 0 rgb(255 40 70 / 0.55),
+      inset -5px 0 0 rgb(0 210 255 / 0.5),
+      inset 0 3px 0 rgb(255 40 70 / 0.3),
+      inset 0 -3px 0 rgb(0 210 255 / 0.3);
+  }
+
+  /* ── Play / pause ────────────────────────────────────────────────────── */
+  .vplay {
+    position: absolute;
+    left: 0.75rem;
+    bottom: 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    min-height: 44px;
+    padding: 0.4em 0.95em;
+    border: 0;
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--chocolate);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 3px 0 var(--deep-brown);
+  }
+  .vplay:focus-visible {
+    outline: 3px solid var(--mustard);
+    outline-offset: 3px;
+  }
+  .vplay-icon {
+    width: 0;
+    height: 0;
+    border-block: 0.4em solid transparent;
+    border-left: 0.65em solid currentColor;
+  }
+  .vplay[aria-pressed='true'] .vplay-icon {
+    width: 0.6em;
+    height: 0.8em;
+    border: 0;
+    border-inline: 0.2em solid currentColor;
+  }
+</style>

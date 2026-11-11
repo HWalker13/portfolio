@@ -1,0 +1,81 @@
+---
+/*
+  Wavy, melting 70s display lettering, for big moments only ("Let's talk" and the poster title).
+  Body copy and project titles stay in plain Fraunces.
+
+  Accessibility: the real text is in the element (visually hidden); the wavy letters are an
+  aria-hidden copy, so screen readers and copy/paste get "Let's talk", not seven fragments.
+
+  The wave: each letter gets a fixed rise, tilt and stretch along a sine, computed here at build
+  time (no script, no animation). The melt: a static SVG displacement filter (#melt, defined once
+  by MeltFilter.astro) that softens the edges as if the ink ran. It's rendered once, not per frame.
+*/
+interface Props {
+  text: string;
+  as?: 'h2' | 'p';
+  id?: string;
+  class?: string;
+  /** Wave strength, 0 to ~1.5 */
+  amp?: number;
+}
+const { text, as: Tag = 'h2', id, class: className, amp = 1 } = Astro.props;
+// Letters are grouped by word, so a long title wraps between words, never inside one.
+// The sine runs continuously across words (i counts every letter), so the wave flows through.
+let i = 0;
+const words = text.split(' ').map((word) =>
+  [...word].map((ch) => {
+    const a = i++ * 0.78;
+    return {
+      ch,
+      style: [
+        `--dy:${(Math.sin(a) * 0.075 * amp).toFixed(3)}em`,
+        `--r:${(Math.cos(a) * 5 * amp).toFixed(2)}deg`,
+        `--sy:${(1 + Math.sin(a + 1.2) * 0.07 * amp).toFixed(3)}`,
+      ].join(';'),
+    };
+  }),
+);
+---
+
+<Tag id={id} class:list={['wavy', className]}>
+  <span class="visually-hidden">{text}</span>
+  <span class="letters" aria-hidden="true">
+    {
+      words.map((w) => (
+        <span class="w">
+          {w.map((l) => (
+            <span class="l" style={l.style}>
+              {l.ch}
+            </span>
+          ))}
+        </span>
+      ))
+    }
+  </span>
+</Tag>
+
+<style>
+  .wavy {
+    font-family: var(--font-display);
+    font-variation-settings: 'SOFT' 100, 'WONK' 1;
+    font-weight: 900;
+    line-height: 1;
+    letter-spacing: -0.01em;
+  }
+  .letters {
+    display: inline-flex;
+    flex-wrap: wrap;
+    justify-content: inherit;
+    column-gap: 0.28em;
+    filter: url(#melt);
+  }
+  .l {
+    display: inline-block;
+    transform: translateY(var(--dy)) rotate(var(--r)) scaleY(var(--sy));
+    transform-origin: 50% 80%;
+  }
+  .w {
+    display: inline-flex;
+    white-space: nowrap;
+  }
+</style>

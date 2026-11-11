@@ -48,17 +48,18 @@ h4 {
 }
 
 /*
-  Paper grain: one tiny inline SVG noise tile, fixed behind everything.
-  It's a pseudo-element so it never takes part in layout, and pointer-events: none keeps it from catching clicks.
+  Print grain: a pre-rendered 9 KB tile (scripts/make-textures.mjs) at opacity var(--grain).
+  Put .grain as the first child of a position:relative color field. It covers the field, and
+  content that follows it must sit on its own clean color (z-index 1 + solid background) or
+  sit where the grain isn't, because grain never goes behind text, stats, links or buttons.
 */
-body::before {
-  content: '';
-  position: fixed;
+.grain {
+  position: absolute;
   inset: 0;
-  z-index: -1;
+  z-index: 0;
   pointer-events: none;
-  opacity: var(--grain-opacity);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background: var(--grain-image) 0 0 / 200px 200px repeat;
+  opacity: var(--grain);
 }
 
 /* Type */

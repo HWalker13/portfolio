@@ -267,7 +267,7 @@ export const SWAP_DURATION = SWAP_PHASES.reduce((t, p) => t + p.duration, 0);
 
 /**
   Default slide distance, in record heights. On the home page the turntable measures the real
-  distance to the rug's bottom edge once per swap (the sleeve covers everything below it).
+  distance to the stage's bottom edge once per swap (the sleeve covers everything below it).
 */
 export const SLIDE_DISTANCE = 1.9;
 

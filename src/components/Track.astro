@@ -6,8 +6,9 @@ interface Props {
   entry: CollectionEntry<'projects'>;
 }
 const { entry } = Astro.props;
-const { title, subtitle, track, tagline, headlineStats, proof } = entry.data;
-const href = `/projects/${entry.id}/`;
+const { title, track, tagline, proof } = entry.data;
+// Jumps to this project's section in the reel on the same page.
+const href = `#${entry.id}`;
 // Each track's record gets its own label color.
 const LABELS = ['var(--burnt-orange)', 'var(--mustard)', 'var(--avocado)', 'var(--walnut)'];
 const label = LABELS[(track - 1) % LABELS.length];
@@ -25,24 +26,10 @@ const label = LABELS[(track - 1) % LABELS.length];
     <h4>
       <span class="visually-hidden">Track {track}: </span>
       <a href={href}>{title}</a>
-      {subtitle && <span class="subtitle">{subtitle}</span>}
     </h4>
     <p class="tagline">{tagline}</p>
-    <ul class="stats">
-      {
-        headlineStats.map((s) => (
-          <li>
-            {s.lead && <span class="context">{s.lead} </span>}
-            <span class="value">{s.value}</span>
-            {/^[,.;:]/.test(s.context) ? '' : ' '}
-            <span class="context">{s.context}</span>
-          </li>
-        ))
-      }
-    </ul>
     <div class="links">
       <ProofLinks project={title} proof={proof} />
-      <a class="notes" href={href}>Liner notes<span class="visually-hidden"> for {title}</span></a>
     </div>
   </div>
   </div>
@@ -57,7 +44,7 @@ const label = LABELS[(track - 1) % LABELS.length];
     --peek-size: 64px;
   }
   .track + .track {
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
   }
 
   /* The sleeve: a cream panel with a 70s offset block shadow */
@@ -67,7 +54,7 @@ const label = LABELS[(track - 1) % LABELS.length];
     display: grid;
     grid-template-columns: 2.4rem minmax(0, 1fr);
     gap: var(--space-3);
-    padding: var(--space-4) var(--space-4) var(--space-3) var(--space-3);
+    padding: var(--space-3) var(--space-4) var(--space-2) var(--space-3);
     background: var(--bg);
     border: 2px solid var(--text);
     border-radius: 8px;
@@ -134,56 +121,16 @@ const label = LABELS[(track - 1) % LABELS.length];
   h4 a:hover {
     color: var(--link);
   }
-  .subtitle {
-    display: block;
-    margin-top: 0.2rem;
-    font-family: var(--font-body);
-    font-size: var(--step--1);
-    font-weight: 500;
-    color: var(--text-muted);
-  }
   .tagline {
-    margin-top: var(--space-2);
-  }
-  .stats {
-    list-style: none;
-    padding: 0;
-    margin-top: var(--space-3);
-    display: grid;
-    gap: var(--space-2);
-  }
-  .stats li {
-    max-width: var(--measure);
-    line-height: 1.4;
-  }
-  .value {
-    font-family: var(--font-mono);
-    font-weight: 700;
-    font-size: 1.05em;
-    font-variant-numeric: tabular-nums;
-    color: var(--text);
-    padding: 0.05em 0.35em;
-    border-radius: 6px;
-    background: color-mix(in srgb, var(--mustard) 28%, transparent);
-    /* A longer chip ("First paying subscribers") can wrap: give each line its own rounded highlight. */
-    -webkit-box-decoration-break: clone;
-    box-decoration-break: clone;
-  }
-  .context {
-    color: var(--text-muted);
+    margin-top: var(--space-1);
+    font-size: var(--step--1);
+    line-height: 1.45;
   }
   .links {
-    margin-top: var(--space-3);
+    margin-top: var(--space-1);
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     gap: 0.25rem 1.1rem;
-  }
-  .notes {
-    padding-block: 0.35rem;
-    font-size: var(--step--1);
-    font-weight: 600;
-    color: var(--text);
-    text-decoration-color: var(--burnt-orange);
   }
 </style>

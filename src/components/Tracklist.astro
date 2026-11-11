@@ -1,12 +1,12 @@
 ---
 /*
-  The album sleeve: a paper surface lying across the rug's edge. It holds the tracklist
-  (Side A / Side B) and the credits (About), like the back of a record sleeve.
+  Quick tracklist: the back of the album sleeve, lying across the orange stage's edge.
+  All four projects in one compact list (number, name, one line, proof links), so a recruiter
+  sees everything in five seconds. Each name jumps to that project's section in the reel.
 */
 import { getCollection } from 'astro:content';
 import Track from './Track.astro';
 import Ribbon from './Ribbon.astro';
-import About from './About.astro';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
 const sides = (['A', 'B'] as const).map((side) => ({
@@ -15,7 +15,7 @@ const sides = (['A', 'B'] as const).map((side) => ({
 }));
 ---
 
-<section class="sleeve container" aria-labelledby="tracklist-title">
+<section class="sleeve container" id="tracklist" aria-labelledby="tracklist-title">
   <div class="sleeve-inner sleeve-inner--ribbon">
     <div class="sleeve-head">
       <h2 id="tracklist-title">Tracklist</h2>
@@ -40,8 +40,6 @@ const sides = (['A', 'B'] as const).map((side) => ({
       }
     </div>
     </Ribbon>
-
-    <About />
   </div>
 </section>
 
@@ -51,7 +49,11 @@ const sides = (['A', 'B'] as const).map((side) => ({
     color: var(--text-muted);
   }
   .sleeve :global(.tracklist-ribbon) {
-    margin-block: var(--space-4) var(--space-5);
+    margin-top: var(--space-4);
+  }
+  /* Room below the sleeve so its shadow falls on cream, not on the eyes band */
+  .sleeve {
+    margin-bottom: var(--space-6);
   }
 
   .sides {

@@ -2,11 +2,23 @@
 import Base from '../layouts/Base.astro';
 import Hero from '../components/Hero.astro';
 import Tracklist from '../components/Tracklist.astro';
+import EyesBand from '../components/EyesBand.astro';
+import ProjectReel from '../components/ProjectReel.astro';
+import About from '../components/About.astro';
+import LetsTalk from '../components/LetsTalk.astro';
 import Footer from '../components/Footer.astro';
 ---
 
+<!--
+  Home, top to bottom: orange hero with the turntable, the quick tracklist on its sleeve,
+  the eyes band, one project per screen on the reel, About, and the Let's talk corkboard.
+-->
 <Base person>
   <Hero />
   <Tracklist />
-  <Footer slot="footer" />
+  <EyesBand />
+  <ProjectReel />
+  <About />
+  <LetsTalk />
+  <Footer slot="footer" compact />
 </Base>
