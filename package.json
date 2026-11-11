@@ -11,7 +11,8 @@
     "textures": "node scripts/make-textures.mjs",
     "poster-art": "node scripts/make-poster-art.mjs",
     "icons": "node scripts/make-icons.mjs",
-    "og": "node scripts/make-og.mjs"
+    "og": "node scripts/make-og.mjs",
+    "demos": "node scripts/make-demos.mjs"
   },
   "type": "module",
   "dependencies": {

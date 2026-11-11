@@ -6,3 +6,5 @@ dist/
 *.log
 .env
 .env.*
+# Intermediate demo recordings (scripts/make-demos.mjs); the finished videos are in public/videos
+scripts/demos/out/

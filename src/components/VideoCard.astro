@@ -4,8 +4,8 @@
     wheel  - on the curved wheel (desktop, motion OK). Transforms are set by src/scripts/reel.ts.
     inline - flat, inside the project's own section (phones, and everyone with reduced motion).
 
-  With a video: muted, looped, playsinline, preload="none" (nothing downloads until it plays),
-  with a poster frame and a real Play/Pause button.
+  With a video: muted, looped, playsinline, preload="none" (nothing downloads until it plays).
+  Its poster frame is a lazy-loaded <img> under the video, and there's a real Play/Pause button.
   Without one (until Stage 3): a styled placeholder with the project name.
 
   Layers, bottom to top: poster (image or placeholder art), video, fringe, button.
@@ -57,7 +57,8 @@ const num = String(index + 1).padStart(2, '0');
   {
     video && (
       <>
-        <video muted loop playsinline preload="none" poster={video.poster} aria-label={`Demo of ${title}`}>
+        {/* No poster attribute: browsers fetch a video poster eagerly. The lazy <img> above shows it. */}
+        <video muted loop playsinline preload="none" aria-label={`Demo of ${title}`}>
           {video.webm && <source src={video.webm} type="video/webm" />}
           <source src={video.mp4} type="video/mp4" />
         </video>
@@ -164,10 +165,11 @@ const num = String(index + 1).padStart(2, '0');
   }
 
   /* ── Play / pause ────────────────────────────────────────────────────── */
+  /* Top right: the demos keep that corner empty, and their caption strip runs along the bottom */
   .vplay {
     position: absolute;
-    left: 0.75rem;
-    bottom: 0.75rem;
+    right: 0.75rem;
+    top: 0.75rem;
     display: inline-flex;
     align-items: center;
     gap: 0.45em;

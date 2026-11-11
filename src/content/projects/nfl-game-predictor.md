@@ -20,6 +20,10 @@ proof:
   - kind: github
     label: GitHub
     url: https://github.com/HWalker13/NFL-GAME-PREDICTOR
+video:
+  webm: /videos/nfl.webm
+  mp4: /videos/nfl.mp4
+  poster: /videos/nfl-poster.webp
 ---
 
 ## The problem

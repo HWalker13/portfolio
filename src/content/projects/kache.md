@@ -19,6 +19,10 @@ proof:
   - kind: github
     label: GitHub
     url: https://github.com/HWalker13/kache
+video:
+  webm: /videos/kache.webm
+  mp4: /videos/kache.mp4
+  poster: /videos/kache-poster.webp
 ---
 
 ## The problem
