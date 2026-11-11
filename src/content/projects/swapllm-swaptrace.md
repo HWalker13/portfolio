@@ -31,6 +31,10 @@ proof:
   - kind: github
     label: GitHub swaptrace
     url: https://github.com/HWalker13/swaptrace
+video:
+  webm: /videos/swaptrace.webm
+  mp4: /videos/swaptrace.mp4
+  poster: /videos/swaptrace-poster.webp
 ---
 
 ## The problem
@@ -73,7 +77,7 @@ Every LLM provider fails sometimes: rate limits, timeouts, server errors. I want
 </figure>
 
 <!-- DRAFT: Holden to edit -->
-**swapLLM** puts Groq, OpenAI and Anthropic behind one `Router.complete()` call and falls back automatically on rate limits, timeouts and server errors. A typed exception hierarchy separates retryable failures from fatal ones, and responses can optionally be validated with Pydantic. It has an 89-test pytest suite that is fully mocked, so it makes zero live API calls, and I did a TestPyPI dry run before the real release.
+**swapLLM** puts Groq, OpenAI and Anthropic behind one `Router.complete()` call and falls back automatically on rate limits, timeouts and server errors. A typed exception hierarchy separates retryable failures from fatal ones, and responses can optionally be validated with Pydantic. It has a 96-test pytest suite that is fully mocked, so it makes zero live API calls, and I did a TestPyPI dry run before the real release.
 
 <!-- DRAFT: Holden to edit -->
 **swaptrace** reimplements swapLLM's retry loop with verified behavioral parity and adds attempt-level tracing. It has 73 tests, zero runtime dependencies, and a CLI for comparing traces across providers.
@@ -91,6 +95,9 @@ Every LLM provider fails sometimes: rate limits, timeouts, server errors. I want
 <!-- DRAFT: Holden to edit -->
 **Proving the tracing is cheap.** Overhead numbers this small are easy to fake by accident. Garbage-collection pauses land at random and swamp the measurement. I disabled the GC during timing and ran 5 trials of 1,000 iterations each.
 
+<!-- DRAFT: Holden to edit -->
+**The tracer found a bug in the router.** swaptrace's attempt-level latencies showed more than a second on providers that were failing instantly. Counting the HTTP requests showed why: swapLLM never turned off the SDK clients' built-in retries, so each SDK silently retried twice per provider, 3 requests and 1.3 to 1.6 seconds before fallback, while the README promised no same-provider retry. swapLLM 0.1.1 sets `max_retries=0` on all three clients, with tests that count the requests: one failure, one request.
+
 </div>
 
 ## Results
@@ -98,7 +105,7 @@ Every LLM provider fails sometimes: rate limits, timeouts, server errors. I want
 <!-- DRAFT: Holden to edit -->
 - **2 packages on PyPI**: swapllm and swaptrace.
 - **7.75µs of overhead per call** for tracing, under 0.01% of real LLM latency.
-- **89 tests** for swapLLM, fully mocked, with zero live API calls.
+- **96 tests** for swapLLM, fully mocked, with zero live API calls.
 - **73 tests** for swaptrace, with zero runtime dependencies.
 
 <!--

@@ -34,11 +34,12 @@ const HOLD_S = 1.4;
 const MAX_BYTES = 2 * 1024 * 1024;
 
 /*
-  Terminal geometry from the tapes (FontSize 19, LineHeight 1.08, Padding 30): line n (0-based)
-  sits at y = TOP + n * LINE. Measured from a frame, not assumed; adjust if a tape's font changes.
+  Terminal geometry: line n (0-based) sits at y = TOP + n * LINE. LINE is the row pitch of the
+  tapes' font (FontSize 19, LineHeight 1.08), measured from frames. TOP is measured per recording
+  (the first row of ink in its last frame), since it shifts with a tape's Padding.
 */
-const TOP = 31;
-const LINE = 27.4;
+const LINE = 27.9;
+let TOP = 31;
 const lineBox = (n, x = 30, w = 260) => ({ x, y: Math.round(TOP + n * LINE), w, h: Math.round(LINE) - 4 });
 
 const DEMOS = {
@@ -58,6 +59,20 @@ const DEMOS = {
         caption: 'Link back: the replica caught up, 5 of 5 writes, none lost',
         strong: true,
         box: { fromLine: 17, toLine: 22, x: 22, w: 180 },
+      },
+    ],
+  },
+  swaptrace: {
+    title: 'swapLLM + swaptrace',
+    subtitle: 'A fallback cascade, every attempt traced',
+    moments: [
+      { line: 0, caption: 'swapLLM 0.1.1 from PyPI. Providers are mocked: no API keys, no network' },
+      { line: 3, caption: 'Groq rate-limits, OpenAI errors, Anthropic answers' },
+      {
+        line: 11,
+        caption: 'Every attempt is kept, not just the winner: one HTTP request per provider',
+        strong: true,
+        box: { fromLine: 6, toLine: 8, x: 10, w: 1260, below: 5 }, // underscores sit low on the last row
       },
     ],
   },
@@ -137,12 +152,22 @@ const strip = (text, strong) => `
   </div>`;
 
 const boxOverlay = (b) => {
-  const y = Math.round(TOP + b.fromLine * LINE) - 5;
-  const h = Math.round((b.toLine - b.fromLine + 1) * LINE) + 8;
+  // Hugs the rows: starts just above the first, ends just below the last, clear of the next prompt
+  const y = Math.round(TOP + b.fromLine * LINE) - 6;
+  const h = Math.round((b.toLine - b.fromLine + 1) * LINE) + 1 + (b.below ?? 0);
   return `<div style="width:${W}px;height:${TERM_H}px;position:relative">
     <div style="position:absolute;left:${b.x}px;top:${y}px;width:${b.w}px;height:${h}px;border:4px solid #E0A526;border-radius:12px;
       box-shadow:0 0 0 4px rgb(30 20 13 / .6)"></div></div>`;
 };
+
+/** y of the first text row in the recording's last frame, minus a little headroom for the box */
+function measureTop(raw) {
+  const f = sh('ffmpeg', ['-v', 'error', '-sseof', '-0.1', '-i', raw, '-frames:v', '1', '-vf', 'format=gray', '-f', 'rawvideo', '-'], {
+    maxBuffer: 1 << 26,
+  });
+  for (let y = 0; y < TERM_H; y++) for (let x = 0; x < 400; x++) if (f[y * W + x] > 120) return y - 3;
+  throw new Error('no text in the last frame');
+}
 
 /** Seconds at which each moment's line first gets ink (bright pixels) in the raw recording. */
 function findMoments(raw, moments) {
@@ -152,7 +177,7 @@ function findMoments(raw, moments) {
   const size = W * TERM_H;
   const n = Math.floor(frames.length / size);
   return moments.map((m) => {
-    const b = lineBox(m.line, m.x ?? 30, m.w ?? 260);
+    const b = lineBox(m.line, m.x ?? 18, m.w ?? 260);
     for (let i = 0; i < n; i++) {
       let lit = 0;
       for (let y = b.y; y < b.y + b.h; y += 2)
@@ -169,6 +194,7 @@ async function build(name, page) {
   console.log(`[${name}] recording ${name}.tape`);
   sh('vhs', [`scripts/demos/${name}/${name}.tape`]);
   const dur = Number(sh('ffprobe', ['-v', 'error', '-show_entries', 'format=duration', '-of', 'csv=p=0', raw]).toString());
+  TOP = measureTop(raw);
   const at = findMoments(raw, d.moments);
   // Moment 0 starts the strip at once; every later moment starts when its line appears.
   at[0] = 0;

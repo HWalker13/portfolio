@@ -191,8 +191,9 @@ These facts come from my resume and past work. **Use only these numbers and clai
 - **Proof:** https://pypi.org/project/swapllm · https://github.com/HWalker13/swapllm · https://pypi.org/project/swaptrace · https://github.com/HWalker13/swaptrace
 - **Stack:** Python, Pydantic, pytest, dataclasses, JSONL, GitHub Actions
 - **The story arc:** "I built a router, found a real gap in it, then reverse-engineered my own tool to fix it."
-- **swapLLM:** unifies Groq, OpenAI and Anthropic behind one `Router.complete()` call, with automatic fallback on rate limits, timeouts and server errors. It has a typed exception hierarchy that separates retryable failures from fatal ones, and optional Pydantic response validation. There's an 89-test mocked pytest suite (zero live API calls), and I did a TestPyPI dry run before release.
+- **swapLLM:** unifies Groq, OpenAI and Anthropic behind one `Router.complete()` call, with automatic fallback on rate limits, timeouts and server errors. It has a typed exception hierarchy that separates retryable failures from fatal ones, and optional Pydantic response validation. There's a 96-test mocked pytest suite (zero live API calls), and I did a TestPyPI dry run before release.
 - **swaptrace:** I found that swapLLM's fallback cascade threw away all per-attempt data when a call succeeded. So I reimplemented the retry loop with verified behavioral parity and full attempt-level tracing. Overhead is 7.75µs/call (under 0.01% of real LLM latency), measured with a GC-disabled methodology (5 trials × 1,000 iterations). It has 73 tests, zero runtime dependencies, and a CLI for comparing traces across providers.
+- **The bug swaptrace found (approved for the liner notes, Nov 2026):** swaptrace's attempt-level tracing revealed that swapLLM's SDK clients were silently retrying twice per provider (3 HTTP requests and 1.3 to 1.6 seconds before fallback), contradicting the README. Fixed in swapLLM 0.1.1 (`max_retries=0` on all three clients, plus tests that count HTTP requests).
 
 ### 4. Kache
 - **Date:** 2026
