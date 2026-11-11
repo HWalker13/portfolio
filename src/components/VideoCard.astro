@@ -6,9 +6,10 @@
 
   With a video: muted, looped, playsinline, preload="none" (nothing downloads until it plays).
   Its poster frame is a lazy-loaded <img> under the video, and there's a real Play/Pause button.
-  Without one (until Stage 3): a styled placeholder with the project name.
+  Without one: a static card with the project name, where it's live, and a button to it
+  (the App Store for an app, else PyPI or GitHub), taken from the project's proof links.
 
-  Layers, bottom to top: poster (image or placeholder art), video, fringe, button.
+  Layers, bottom to top: poster (image or static card), video, fringe, button.
   The chromatic-aberration fringe is a static red/cyan edge shadow whose opacity the wheel
   sets per frame (opacity only, so it's free on the compositor). It's never applied to the
   live video, only to the card edge around the poster layer, and only off-focus.
@@ -21,9 +22,9 @@ interface Props {
   variant: 'wheel' | 'inline';
 }
 const { entry, index, variant } = Astro.props;
-const { title, video } = entry.data;
+const { title, video, proof } = entry.data;
 
-// Placeholder inks: each a field deep brown text passes on (≥4.9:1), plus two accent stripes.
+// Static-card inks: each a field deep brown text passes on (≥4.9:1), plus two accent stripes.
 const LOOKS = [
   { bg: 'var(--burnt-orange)', a: 'var(--mustard)', b: 'var(--cream)' },
   { bg: 'var(--mustard)', a: 'var(--burnt-orange)', b: 'var(--chocolate)' },
@@ -32,28 +33,42 @@ const LOOKS = [
 ];
 const look = LOOKS[index % LOOKS.length];
 const num = String(index + 1).padStart(2, '0');
+
+// Static card: where the project lives, preferring the App Store, then PyPI, then GitHub.
+const WHERE = {
+  appstore: { status: 'Live on the App Store', button: 'View on the App Store' },
+  pypi: { status: 'Published on PyPI', button: 'View on PyPI' },
+  github: { status: 'Open source on GitHub', button: 'View on GitHub' },
+} as const;
+const home = (['appstore', 'pypi', 'github'] as const).map((k) => proof.find((p) => p.kind === k)).find(Boolean)!;
+const where = WHERE[home.kind];
 ---
 
 <figure
   class:list={['vcard', `vcard--${variant}`, video && `vcard--${video.frame}`]}
   data-card={index}
   data-variant={variant}
-  style={`--ph-bg:${look.bg};--ph-a:${look.a};--ph-b:${look.b}`}
+  style={`--sc-bg:${look.bg};--sc-a:${look.a};--sc-b:${look.b}`}
 >
-  <div class="poster-layer" aria-hidden="true">
-    {
-      video ? (
+  {
+    video ? (
+      <div class="poster-layer" aria-hidden="true">
         <img src={video.poster} alt="" loading="lazy" decoding="async" />
-      ) : (
-        <div class="ph">
-          <span class="ph-stripes" />
-          <span class="ph-num">{num}</span>
-          <span class="ph-name">{title}</span>
-          <span class="ph-note">Demo video coming soon</span>
-        </div>
-      )
-    }
-  </div>
+      </div>
+    ) : (
+      <div class="sc">
+        <span class="sc-stripes" aria-hidden="true" />
+        <span class="sc-num" aria-hidden="true">{num}</span>
+        <p class="sc-name">{title}</p>
+        <p class="sc-status">{where.status}</p>
+        <a class="sc-button" href={home.url}>
+          {where.button}
+          <span class="visually-hidden"> ({title})</span>
+          <span class="sc-arrow" aria-hidden="true">↗</span>
+        </a>
+      </div>
+    )
+  }
   {
     video && (
       <>
@@ -80,15 +95,14 @@ const num = String(index + 1).padStart(2, '0');
     aspect-ratio: 16 / 10;
     border-radius: 18px;
     overflow: hidden;
-    background: var(--ph-bg);
+    background: var(--sc-bg);
     box-shadow:
       0 0 0 3px var(--deep-brown),
       0 26px 50px -22px rgb(0 0 0 / 0.7);
   }
   .poster-layer,
   .poster-layer img,
-  video,
-  .ph {
+  video {
     position: absolute;
     inset: 0;
     width: 100%;
@@ -105,15 +119,19 @@ const num = String(index + 1).padStart(2, '0');
     padding: 6% 0;
   }
 
-  /* ── Placeholder ─────────────────────────────────────────────────────── */
-  .ph {
+  /* ── Static card (no video) ─────────────────────────────────────────── */
+  .sc {
+    position: absolute;
+    inset: 0;
     display: grid;
     align-content: end;
+    justify-items: start;
+    gap: 0.35rem;
     padding: clamp(1rem, 4%, 1.6rem);
     color: var(--deep-brown);
   }
   /* A corner supergraphic: three quarter-circle bands in the top right */
-  .ph-stripes {
+  .sc-stripes {
     position: absolute;
     top: 0;
     right: 0;
@@ -121,33 +139,55 @@ const num = String(index + 1).padStart(2, '0');
     aspect-ratio: 1;
     background: radial-gradient(
       circle at 100% 0,
-      var(--ph-a) 0 18%,
+      var(--sc-a) 0 18%,
       transparent 18.5% 26%,
-      var(--ph-b) 26.5% 38%,
+      var(--sc-b) 26.5% 38%,
       transparent 38.5% 46%,
-      var(--ph-a) 46.5% 58%,
+      var(--sc-a) 46.5% 58%,
       transparent 58.5%
     );
   }
-  .ph-num {
+  .sc-num {
+    position: relative;
     font-family: var(--font-mono);
     font-weight: 700;
     font-size: 0.85rem;
   }
-  .ph-name {
+  .sc-name {
     position: relative;
     font-family: var(--font-display);
     font-variation-settings: var(--display-variation);
     font-weight: 900;
-    font-size: clamp(1.6rem, 3.4vw, 2.6rem);
+    font-size: clamp(1.8rem, 3.6vw, 2.8rem);
     line-height: 1;
-    text-wrap: balance;
   }
-  .ph-note {
+  .sc-status {
+    position: relative;
+    font-weight: 700;
+    font-size: 1rem;
+  }
+  .sc-button {
+    position: relative;
     margin-top: 0.4rem;
-    font-family: var(--font-mono);
-    font-size: 0.78rem;
-    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45em;
+    min-height: 44px;
+    padding: 0.4em 1em;
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--chocolate);
+    font-weight: 700;
+    text-decoration: none;
+    box-shadow: 0 3px 0 var(--deep-brown);
+  }
+  .sc-button:hover {
+    background: var(--mustard);
+    color: var(--chocolate);
+  }
+  .sc-button:focus-visible {
+    outline: 3px solid var(--deep-brown);
+    outline-offset: 3px;
   }
 
   /* ── Fringe (off-focus only; the wheel drives its opacity) ───────────── */

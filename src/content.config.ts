@@ -43,7 +43,7 @@ const projects = defineCollection({
       .min(1),
     /**
       Demo video for the reel (Stage 3). Paths under public/. Until a project has one, the reel
-      shows a styled placeholder card with the project name. The poster frame is required, so a
+      shows a static card: the name, where it's live, and a button to it. The poster frame is required, so a
       video can never show up as a blank box.
     */
     video: z
