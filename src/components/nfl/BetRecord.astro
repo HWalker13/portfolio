@@ -1,0 +1,160 @@
+---
+/*
+  Paper betting: the live 2026 official record next to the same rule replayed on 2023–24 and
+  2025, then the pre-registered closing-line-value (CLV) verdict, which is the only test that
+  counts as evidence of an edge.
+*/
+import type { BetColumn } from '../../data/nfl/derive';
+import type { SiteData } from '../../data/nfl/schema';
+import { ciPct, pValue, signed, signedPct } from '../../data/nfl/format';
+
+interface Props {
+  columns: BetColumn[];
+  live: SiteData['live_2026'];
+  definitions: SiteData['definitions'];
+}
+const { columns, live, definitions } = Astro.props;
+const v = live.clv_verdict;
+const B = live.official_bets;
+/** CLV is a change in probability; show it in percentage points. */
+const pts = (x: number | null) => (x === null ? 'n/a' : `${signed(100 * x, 2)}`);
+const roiRange = ciPct(B.roi_ci95, 1, true);
+---
+
+<div class="scroll" role="region" aria-labelledby="bets-caption" tabindex="0">
+  <table class="nfl-table bets">
+    <caption id="bets-caption" class="visually-hidden">Paper-bet results: live 2026 and the same rule replayed on past seasons</caption>
+    <thead>
+      <tr>
+        <th scope="col"><span class="visually-hidden">Measure</span></th>
+        {
+          columns.map((c) => (
+            <th scope="col">
+              {c.label}
+              {c.retroactive && <span class="sub">applied after the fact</span>}
+              {!c.retroactive && <span class="sub">official record</span>}
+            </th>
+          ))
+        }
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Bets placed</th>
+        {columns.map((c) => <td>{`${c.record.bets} of ${c.games} games`}</td>)}
+      </tr>
+      <tr>
+        <th scope="row">Won-lost-void</th>
+        {columns.map((c) => <td>{c.record.record}{c.record.pending ? `, ${c.record.pending} pending` : ''}</td>)}
+      </tr>
+      <tr>
+        <th scope="row">Profit (units)</th>
+        {columns.map((c) => <td>{signed(c.record.units, 2)}</td>)}
+      </tr>
+      <tr>
+        <th scope="row">ROI: return per bet (95% CI)</th>
+        {
+          columns.map((c) => (
+            <td>
+              {signedPct(c.record.roi)} <span class="range">({ciPct(c.record.roi_ci95, 1, true)})</span>
+            </td>
+          ))
+        }
+      </tr>
+    </tbody>
+  </table>
+</div>
+<p class="small">{definitions.retroactive} {definitions.bet_rule}</p>
+
+<!-- DRAFT: Holden to edit -->
+<p class="why">
+  {B.bets} bets is too few for profit to mean much: the live return per bet could plausibly be anywhere from {roiRange}. So the
+  rule I committed before the first official week ignores profit and counts only closing-line value: whether the market moved
+  toward my bets after I placed them.
+</p>
+
+<div class="verdict">
+  <p class="eyebrow">Closing-line value, the test that counts{v.final ? '' : ' (not final)'}</p>
+  <p class="headline">{v.verdict}</p>
+  <dl>
+    <div>
+      <dt>Average line move toward my bets</dt>
+      <dd>{pts(v.mean)} points <span class="range">(95% CI {pts(v.ci95[0])} to {pts(v.ci95[1])})</span></dd>
+    </div>
+    <div>
+      <dt>One-sided p</dt>
+      <dd>{v.p_one_sided === null ? 'n/a' : pValue(v.p_one_sided)}</dd>
+    </div>
+    <div>
+      <dt>Bets measured</dt>
+      <dd>{`${v.n} of ${v.n + v.n_excluded}`}</dd>
+    </div>
+  </dl>
+  <p class="small">
+    {v.n_excluded} bets are excluded because no line was saved late enough to compare against: {v.clv_window_rule}
+    {v.final ? '' : ' The verdict becomes final once the last regular-season week is graded.'}
+  </p>
+  <p class="small"><b>The rule:</b> {v.rule}</p>
+</div>
+
+<style>
+  .sub {
+    display: block;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    font-family: var(--font-body);
+  }
+  .bets td {
+    white-space: nowrap;
+  }
+  .range {
+    color: var(--text-muted);
+  }
+  .small {
+    margin-top: var(--space-2);
+    max-width: 44rem;
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .why {
+    margin-top: var(--space-4);
+    max-width: 44rem;
+  }
+  .verdict {
+    margin-top: var(--space-4);
+    padding: var(--space-4);
+    border: 3px solid var(--text);
+    border-radius: var(--radius);
+    max-width: 44rem;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  .headline {
+    margin-top: var(--space-1);
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: var(--step-2);
+  }
+  .verdict dl {
+    margin-block: var(--space-3);
+    display: grid;
+    gap: var(--space-2) var(--space-4);
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  }
+  .verdict dt {
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .verdict dd {
+    margin: 0;
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+</style>

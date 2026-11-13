@@ -83,6 +83,10 @@ for (const [mode, t] of [['light', light], ['dark', dark]]) {
   check(`${mode}: reel step button border on --reel-bg`, c('--reel-muted'), c('--reel-bg'), UI);
   check(`${mode}: reel step button hover (chocolate on --reel-accent)`, c('--chocolate'), c('--reel-accent'), BODY);
 
+  // NFL results chart: bars on the paper sleeve (non-text, so 3:1). --chart-home is listed below
+  // as decorative: under 3:1, its bars are always labelled in text and repeated in a table.
+  for (const fg of ['--chart-model', '--chart-vegas']) check(`${mode}: chart bar ${fg} on --surface`, c(fg), c('--surface'), UI);
+
   // Footer strip
   for (const fg of ['--colophon-text', '--colophon-muted', '--mustard']) check(`${mode}: footer ${fg} on --colophon-bg`, c(fg), c('--colophon-bg'), BODY);
 
@@ -136,6 +140,8 @@ const info = [
   ['hero name: cream directly on orange, without the keyline', l('--cream'), l('--burnt-orange')],
   ['orange on chocolate (why reel links are cream with an orange underline)', l('--burnt-orange'), l('--chocolate')],
   ['poster ink: orange plate on cream (art only)', l('--poster-orange'), l('--cream')],
+  ['light: chart --chart-home (mustard) bar on --surface (labelled + table view)', l('--chart-home'), l('--surface')],
+  ['dark: chart --chart-home bar on --surface', d('--chart-home'), d('--surface')],
 ];
 console.log('\nDecorative only, never used as text:');
 for (const [label, fg, bg] of info) console.log(`  ----  ${ratio(fg, bg).toFixed(2).padStart(5)}:1  ${label}`);

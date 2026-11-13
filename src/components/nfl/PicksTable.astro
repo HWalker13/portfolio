@@ -1,0 +1,175 @@
+---
+/*
+  Every live 2026 pick, one table per week inside <details> (no JS). Both chances are for the
+  same team, the one the model picked, so the two columns compare directly. "Was the pick right?"
+  is the straight-up pick, kept apart from the bet result, because a bet can be on the other team.
+
+  Times are the git commit's local author time; the page says so and never claims "before kickoff".
+*/
+import type { WeekRow } from '../../data/nfl/derive';
+import { pickRow, weekStatus } from '../../data/nfl/derive';
+import { dayTime, odds, pct, signed } from '../../data/nfl/format';
+
+interface Props {
+  rows: WeekRow[];
+  repo: string;
+  committedAtNote: string;
+}
+const { rows, repo, committedAtNote } = Astro.props;
+const lastWithPicks = [...rows].reverse().find((r) => r.games.length > 0)?.week.week;
+const PICK_RIGHT = { yes: 'Yes', no: 'No', tie: 'Tie', pending: 'Not played yet' } as const;
+---
+
+<p class="note">
+  Each table lists one week's picks as logged in the project's write-once prediction file. "Model's chance" and "Market's
+  chance" are both for the team the model picked. The market's chance comes from the moneyline odds with the bookmaker's margin
+  removed.
+</p>
+
+<div class="weeks">
+  {
+    rows.map((r) => {
+      const w = r.week;
+      const s = weekStatus(w);
+      if (r.games.length === 0) {
+        return (
+          <p class="empty">
+            <b>Week {w.week}</b>: {s.label.toLowerCase()}, {s.detail}.
+          </p>
+        );
+      }
+      const graded = w.decided + w.ties;
+      return (
+        <details open={w.week === lastWithPicks}>
+          <summary>
+            <b>Week {w.week}</b>
+            <span>
+              {`${w.predicted} ${w.predicted === 1 ? 'pick' : 'picks'}`}
+              {w.status === 'partial' && ` (only ${w.predicted} of ${w.scheduled} games predicted)`}
+              {graded > 0 ? `, ${r.picksRight} of ${w.decided} right` : ', not played yet'}
+            </span>
+          </summary>
+          <p class="commit">
+            Committed{' '}
+            {w.prediction_commit && w.prediction_committed_at ? (
+              <a href={`${repo}/commit/${w.prediction_commit}`}>
+                {dayTime(w.prediction_committed_at)}
+                <span class="visually-hidden"> (commit {w.prediction_commit.slice(0, 7)} on GitHub)</span>
+              </a>
+            ) : (
+              'n/a'
+            )}
+            . {committedAtNote}
+          </p>
+          <div class="scroll" role="region" aria-label={`Week ${w.week} picks`} tabindex="0">
+            <table class="nfl-table picks">
+              <caption class="visually-hidden">Week {w.week} picks and results</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Game (away @ home)</th>
+                  <th scope="col">Model's pick</th>
+                  <th scope="col">Model's chance its pick wins</th>
+                  <th scope="col">Market's chance for that same team</th>
+                  <th scope="col">Paper bet</th>
+                  <th scope="col">Final score</th>
+                  <th scope="col">Was the pick right? (not the bet)</th>
+                  <th scope="col">Bet result (units)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {r.games.map((g) => {
+                  const p = pickRow(g);
+                  return (
+                    <tr>
+                      <th scope="row">{p.matchup}</th>
+                      <td>{p.pickTeam}</td>
+                      <td class="num">{pct(p.modelChance, 0)}</td>
+                      <td class="num">{p.marketChance === null ? 'No line' : pct(p.marketChance, 0)}</td>
+                      <td>
+                        {p.bet ? (
+                          <>
+                            Bet {p.bet.team} at {odds(p.bet.odds)}
+                            {p.bet.againstPick && <span class="flag"> (against the model's pick)</span>}
+                          </>
+                        ) : (
+                          'No bet'
+                        )}
+                      </td>
+                      <td>{p.score ?? 'Not played yet'}</td>
+                      <td>{PICK_RIGHT[p.pickRight]}</td>
+                      <td class="num">
+                        {p.betResult === null
+                          ? 'No bet'
+                          : p.betResult.kind === 'pending'
+                            ? 'Pending'
+                            : p.betResult.kind === 'void'
+                              ? 'Void (tie, stake back)'
+                              : `${p.betResult.kind === 'won' ? 'Won' : 'Lost'} ${signed(p.betResult.units ?? 0, 2)}`}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </details>
+      );
+    })
+  }
+</div>
+
+<style>
+  .note {
+    max-width: 44rem;
+    margin-bottom: var(--space-3);
+  }
+  .weeks {
+    display: grid;
+    gap: var(--space-2);
+  }
+  details {
+    border-top: 2px solid var(--text);
+  }
+  details:last-child {
+    border-bottom: 2px solid var(--text);
+  }
+  summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 0.75rem;
+    align-items: baseline;
+    min-height: 44px;
+    padding-block: 0.6rem;
+    cursor: pointer;
+  }
+  summary b {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: var(--step-1);
+  }
+  .empty {
+    padding-block: 0.6rem;
+    border-top: 2px solid var(--text);
+  }
+  .empty b {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: var(--step-1);
+  }
+  .commit {
+    margin-bottom: var(--space-2);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .picks td {
+    white-space: nowrap;
+  }
+  .picks th[scope='col'] {
+    min-width: 7rem;
+  }
+  .flag {
+    font-style: italic;
+  }
+</style>

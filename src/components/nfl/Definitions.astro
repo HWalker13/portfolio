@@ -1,0 +1,58 @@
+---
+/* The data file's plain-English definitions, in the order a reader meets the terms on the page. */
+import type { SiteData } from '../../data/nfl/schema';
+
+interface Props {
+  definitions: SiteData['definitions'];
+}
+const { definitions } = Astro.props;
+
+const TERMS: [keyof SiteData['definitions'], string][] = [
+  ['accuracy', 'Accuracy (picks right)'],
+  ['home_baseline', 'Always pick home'],
+  ['vegas_favorite', 'Vegas favorite'],
+  ['vegas_implied', "Market's chance"],
+  ['ci95', '95% confidence interval'],
+  ['log_loss', 'Log loss'],
+  ['brier', 'Brier score'],
+  ['mcnemar_p', 'McNemar p'],
+  ['bet_rule', 'The betting rule'],
+  ['units', 'Units'],
+  ['roi', 'ROI (return per bet)'],
+  ['clv', 'Closing-line value (CLV)'],
+  ['retroactive', 'Replayed (applied after the fact)'],
+  ['pre_registered', 'Pre-registered'],
+  ['prediction_committed_at', 'Committed time'],
+];
+---
+
+<dl class="defs">
+  {
+    TERMS.map(([key, term]) => (
+      <div>
+        <dt>{term}</dt>
+        <dd>{definitions[key]}</dd>
+      </div>
+    ))
+  }
+</dl>
+
+<style>
+  .defs {
+    display: grid;
+    gap: var(--space-3) var(--space-5);
+    max-width: 60rem;
+  }
+  @media (min-width: 760px) {
+    .defs {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  dt {
+    font-weight: 700;
+  }
+  dd {
+    margin: 0.15rem 0 0;
+    font-size: var(--step--1);
+  }
+</style>

@@ -15,6 +15,7 @@
 import { getCollection } from 'astro:content';
 import ProofLinks from './ProofLinks.astro';
 import VideoCard from './VideoCard.astro';
+import { fillProjectCopy } from '../data/nfl';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
 const n = projects.length;
@@ -60,7 +61,8 @@ const STROKES = [
 
     {
       projects.map((entry, i) => {
-        const { title, subtitle, side, track, tagline, headlineStats, proof } = entry.data;
+        // {{nfl.*}} tokens in the copy become numbers from the NFL data file here, at render time.
+        const { title, subtitle, side, track, tagline, headlineStats, proof, results } = fillProjectCopy(entry.data);
         const prev = i === 0 ? { id: 'tracklist', label: 'Back to the tracklist' } : { id: projects[i - 1].id, label: `Previous project: ${projects[i - 1].data.title}` };
         const next = i === n - 1 ? { id: 'about', label: 'Next: about me' } : { id: projects[i + 1].id, label: `Next project: ${projects[i + 1].data.title}` };
         return (
@@ -110,6 +112,11 @@ const STROKES = [
                 <a class="notes" href={`/projects/${entry.id}/`}>
                   Liner notes<span class="visually-hidden"> for {title}</span>
                 </a>
+                {results && (
+                  <a class="notes" href={results}>
+                    Results<span class="visually-hidden"> for {title}</span>
+                  </a>
+                )}
               </div>
             </div>
 

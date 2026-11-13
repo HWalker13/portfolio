@@ -1,0 +1,291 @@
+---
+/*
+  NFL Game Predictor: the full record. Everything here is rendered at build time from
+  src/data/nfl/site_data.json (synced from the project repo with `npm run sync:nfl`).
+  No client JS: the chart is inline SVG and the per-week tables use <details>.
+
+  Copy rules: every number comes from the data (as an expression, never typed), and the 2025
+  test is the "held-out 2025 season" until Holden confirms other wording.
+*/
+import Base from '../../../layouts/Base.astro';
+import Footer from '../../../components/Footer.astro';
+import Ribbon from '../../../components/Ribbon.astro';
+import TopNav from '../../../components/TopNav.astro';
+import HeadlineBars from '../../../components/nfl/HeadlineBars.astro';
+import WeekTracker from '../../../components/nfl/WeekTracker.astro';
+import BetRecord from '../../../components/nfl/BetRecord.astro';
+import PicksTable from '../../../components/nfl/PicksTable.astro';
+import Definitions from '../../../components/nfl/Definitions.astro';
+import Provenance from '../../../components/nfl/Provenance.astro';
+import LeakageChecks from '../../../components/nfl/LeakageChecks.astro';
+import { nfl, nflTokens as t } from '../../../data/nfl';
+import { NFL_REPO } from '../../../data/nfl/tokens';
+import { betColumns, headlineGroups, weekRows } from '../../../data/nfl/derive';
+import { day } from '../../../data/nfl/format';
+import { getEntry } from 'astro:content';
+
+const entry = await getEntry('projects', 'nfl-game-predictor');
+if (!entry) throw new Error('NFL project entry missing');
+
+const REPO = NFL_REPO;
+const L = nfl.live_2026;
+const groups = headlineGroups(nfl);
+const weeks = weekRows(nfl);
+const headings = {
+  'held-out-2023-24': `Held-out 2023–24 · ${t['heldOut.n']} games`,
+  'held-out-2025': `Held-out 2025 season · ${t['y2025.n']} games`,
+  'live-2026': `Live 2026 · ${t['live.n']} games so far`,
+} as const;
+const description = `How often the model picks NFL winners on games it never trained on, next to always picking home and the Vegas favorite, plus every live 2026 pick and paper bet. Data as of ${day(L.as_of_utc)}.`;
+---
+
+<Base title="NFL Game Predictor: results" description={description} ogType="article">
+  <div class="stage stage--slim">
+    <TopNav />
+    <p class="container back"><a href="/projects/nfl-game-predictor/">← Back to the NFL Game Predictor liner notes</a></p>
+  </div>
+
+  <article class="sleeve container">
+    <div class="sleeve-inner sleeve-inner--ribbon">
+      <header class="head">
+        <p class="eyebrow">Side {entry.data.side} · Track {entry.data.track} · The full record</p>
+        <h1>NFL Game Predictor: results</h1>
+        <!-- DRAFT: Holden to edit -->
+        <p class="lede">
+          It beats always picking the home team, loses to Vegas, and this page shows both, test by test and week by week. Live
+          results as of {day(L.as_of_utc)}.
+        </p>
+        <nav aria-label="On this page" class="toc">
+          <a href="#headline">Picking winners</a>
+          <a href="#weeks">2026 week by week</a>
+          <a href="#bets">Paper betting</a>
+          <a href="#picks">Every live pick</a>
+          <a href="#definitions">Definitions</a>
+          <a href="#leakage">Leakage checks, tested</a>
+          <a href="#provenance">Where the numbers come from</a>
+        </nav>
+      </header>
+
+      <Ribbon class="notes-ribbon">
+        <section aria-labelledby="headline" class="sec">
+          <h2 id="headline">How often it picks the winner</h2>
+          <!-- DRAFT: Holden to edit -->
+          <p>
+            Three tests, all on games the model never trained on. In each one it beats always picking the home team and trails
+            the Vegas favorite. The 2023–24 number is the highest of the three, and it's the one I'd discount most.
+          </p>
+
+          <HeadlineBars
+            groups={groups}
+            headings={headings}
+            caption="Share of games where each strategy picked the winner, with 95% confidence intervals"
+          />
+
+          <div class="notes">
+            <!-- DRAFT: Holden to edit -->
+            <p>
+              <b>How the model was chosen.</b> I tested four models on 2023–24. They scored {t['heldOut.models.range']}, and
+              none beat another by more than luck explains (smallest McNemar p = {t['heldOut.mcnemar.minP']}). I picked the tuned
+              logistic regression after seeing those results, for its simplicity, and it happens to hold the top score. Read
+              {' '}{t['heldOut.model.pct']} as the optimistic end of a tie. One disclosure about 2025: the run happened before I
+              had formally signed off on its written test plan (an agent error), though the plan it ran matched the one under
+              review byte for byte.
+            </p>
+            <!-- DRAFT: Holden to edit -->
+            <p>
+              <b>2025.</b> A gradient-boosting model scored {t['y2025.hgb.pct']} to my {t['y2025.model.pct']}. The replacement
+              rule said a challenger takes over only if it is significantly better, on accuracy or on log loss. The rule counts
+              probability quality (log loss) alongside accuracy, because betting depends on how confident the model is, not just
+              which side it picks. On accuracy, the gap missed the bar (p = {t['y2025.hgb.p']}). On log loss, gradient boosting
+              was slightly worse ({t['y2025.hgb.logLoss']} vs. {t['y2025.model.logLoss']}). So I kept mine.
+            </p>
+            <!-- DRAFT: Holden to edit -->
+            <p>
+              <b>2026 so far.</b> {t['live.n']} games is a small sample: the model, the home team and the Vegas favorite all have
+              overlapping intervals. The model's probabilities have been slightly better than the market's so far this season (log
+              loss {t['live.model.logLoss']} vs. {t['live.market.logLoss']}), but the intervals overlap almost entirely.
+            </p>
+          </div>
+        </section>
+
+        <section aria-labelledby="weeks" class="sec">
+          <h2 id="weeks">2026, week by week</h2>
+          <WeekTracker rows={weeks} firstWeek={L.first_official_week} />
+        </section>
+
+        <section aria-labelledby="bets" class="sec">
+          <h2 id="bets">Paper betting</h2>
+          <BetRecord columns={betColumns(nfl)} live={L} definitions={nfl.definitions} />
+        </section>
+
+        <section aria-labelledby="picks" class="sec">
+          <h2 id="picks">Every live pick</h2>
+          <PicksTable rows={weeks} repo={REPO} committedAtNote={nfl.definitions.prediction_committed_at} />
+        </section>
+
+        <section aria-labelledby="definitions" class="sec">
+          <h2 id="definitions">Definitions</h2>
+          <Definitions definitions={nfl.definitions} />
+        </section>
+
+        <section aria-labelledby="leakage" class="sec">
+          <h2 id="leakage">Leakage checks, tested</h2>
+          <LeakageChecks data={nfl} scriptUrl={t['nc.scriptUrl']} resultsUrl={t['nc.resultsUrl']} />
+        </section>
+
+        <section aria-labelledby="provenance" class="sec">
+          <h2 id="provenance">Where the numbers come from</h2>
+          <Provenance data={nfl} repo={REPO} />
+        </section>
+      </Ribbon>
+
+      <nav class="tracknav" aria-label="More on this project">
+        <a href="/projects/nfl-game-predictor/">
+          <span class="dir">Liner notes</span>
+          <span class="name">The story behind these numbers</span>
+        </a>
+        <a href="/#nfl-game-predictor" class="next">
+          <span class="dir">Home</span>
+          <span class="name">Back to the reel</span>
+        </a>
+      </nav>
+    </div>
+  </article>
+
+  <Footer slot="footer" />
+</Base>
+
+<style>
+  .back a {
+    display: inline-block;
+    padding-block: 0.6rem;
+    font-weight: 600;
+  }
+  .head {
+    max-width: 52rem;
+  }
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  h1 {
+    margin-top: var(--space-2);
+    font-size: clamp(2.1rem, 1.5rem + 3vw, 3.6rem);
+  }
+  .lede {
+    margin-top: var(--space-3);
+    font-size: var(--step-1);
+    line-height: 1.45;
+  }
+  .toc {
+    margin-top: var(--space-4);
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1.1rem;
+    font-size: var(--step--1);
+    font-weight: 600;
+  }
+  .toc a {
+    display: inline-block;
+    padding-block: 0.35rem;
+  }
+  :global(.notes-ribbon) {
+    margin-top: var(--space-4);
+  }
+
+  .sec + .sec {
+    margin-top: var(--space-6);
+  }
+  .sec h2 {
+    margin-bottom: var(--space-3);
+    font-size: var(--step-2);
+    scroll-margin-top: var(--space-4);
+  }
+  .sec > p {
+    max-width: 44rem;
+  }
+  .notes {
+    max-width: 44rem;
+    display: grid;
+    gap: var(--space-3);
+  }
+
+  /* Tables shared by the sections: scroll inside their own box on phones, never the page. */
+  .sec :global(.scroll) {
+    overflow-x: auto;
+    margin-inline: calc(-1 * var(--space-2));
+    padding-inline: var(--space-2);
+  }
+  .sec :global(.scroll:focus-visible) {
+    outline-offset: 0;
+  }
+  .sec :global(.nfl-table) {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--step--1);
+  }
+  .sec :global(.nfl-table th),
+  .sec :global(.nfl-table td) {
+    padding: 0.5rem 0.75rem 0.5rem 0;
+    border-bottom: 1px solid var(--rule);
+    text-align: left;
+    vertical-align: top;
+  }
+  .sec :global(.nfl-table thead th) {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+    vertical-align: bottom;
+  }
+  .sec :global(.nfl-table tbody th) {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .sec :global(.nfl-table td) {
+    font-variant-numeric: tabular-nums;
+  }
+  .sec :global(.nfl-table .num) {
+    font-family: var(--font-mono);
+  }
+
+  .tracknav {
+    margin-top: var(--space-5);
+    padding-top: var(--space-4);
+    border-top: 3px solid var(--text);
+    display: flex;
+    justify-content: space-between;
+    gap: var(--space-4);
+  }
+  .tracknav a {
+    display: grid;
+    gap: 0.15rem;
+    text-decoration: none;
+    color: var(--text);
+  }
+  .tracknav .next {
+    text-align: right;
+    margin-left: auto;
+  }
+  .dir {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .name {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: var(--step-1);
+    text-decoration: underline;
+    text-decoration-color: var(--burnt-orange);
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.18em;
+  }
+  .tracknav a:hover .name {
+    color: var(--link);
+  }
+</style>

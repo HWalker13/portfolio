@@ -120,6 +120,16 @@
   --note-rule: var(--powder);
   --ticket-bg: var(--mustard);
 
+  /*
+    NFL results chart (marks only, never text; every bar also has a text label and a value).
+    Checked with the dataviz palette validator: lightness band, chroma, colorblind separation.
+    Mustard is under 3:1 on paper, so its bars rely on their labels and the table view.
+    --chart-vegas is a saturated denim, the only blue the site uses for a data mark.
+  */
+  --chart-home: var(--mustard);
+  --chart-model: var(--burnt-orange);
+  --chart-vegas: #2f72b3;
+
   /* Footer strip */
   --colophon-bg: var(--chocolate);
   --colophon-text: var(--cream);
@@ -197,5 +207,9 @@
     --lamp-shadow: 0.6;
 
     --colophon-bg: #120c08;
+
+    --chart-home: #c08a1a;
+    --chart-model: #b5461c;
+    --chart-vegas: #4f8fd0;
   }
 }

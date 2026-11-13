@@ -1,0 +1,139 @@
+---
+/*
+  "Leakage checks, tested": the negative control as a table, one row per condition. Every value
+  comes from the export's negative_control block, for the current feature set (check2.current_67),
+  the same set the liner notes quote. The build already fails if a sabotage passes the timestamp
+  check (src/data/nfl/derive.ts), so "Missed" below should never render; it exists so the table
+  could never claim a catch the data doesn't show.
+*/
+import type { NcCondition, SiteData } from '../../data/nfl/schema';
+import { SUSPICIOUS_ACCURACY } from '../../data/nfl/derive';
+import { pct } from '../../data/nfl/format';
+
+interface Props {
+  data: SiteData;
+  /** Links to the control's script and results at the export commit. */
+  scriptUrl: string;
+  resultsUrl: string;
+}
+const { data, scriptUrl, resultsUrl } = Astro.props;
+const nc = data.negative_control;
+const nFeatures = nc.conditions[0].check2.current_67.n_features;
+const sabotages = nc.conditions.filter((c) => c.role === 'sabotage').length;
+
+/** Plain names for the known conditions; anything new falls back to the export's own description. */
+const NAMES: Record<string, string> = {
+  clean: 'Clean pipeline (the control)',
+  single_metric_sd: "One stat's rolling average includes the game itself",
+  phase2_roll_left: 'Every rolling average includes the game itself',
+  ewm_only: 'Every recency-weighted (EWM) average includes the game itself',
+  all_rolling: 'Both kinds of average include the game itself',
+};
+const name = (c: NcCondition) => NAMES[c.condition] ?? c.description;
+
+const timestamp = (c: NcCondition) =>
+  c.role === 'control'
+    ? c.check1.verdict === 'PASS'
+      ? 'Passed (correct: nothing to catch)'
+      : 'Failed a clean pipeline'
+    : c.check1.verdict === 'FAIL'
+      ? 'Caught the leak'
+      : 'Missed the leak';
+const shuffle = (c: NcCondition) => {
+  const passed = c.check2.current_67.verdict.startsWith('PASS');
+  if (c.role === 'control') return passed ? 'Passed' : 'Flagged';
+  return passed ? "Passed (didn't notice)" : 'Flagged';
+};
+const suspicious = (c: NcCondition) => c.check2.current_67.contrast_accuracy > SUSPICIOUS_ACCURACY;
+---
+
+<!-- DRAFT: Holden to edit -->
+<p class="intro">
+  To make sure my leakage checks actually work, I broke the pipeline on purpose in {sabotages} ways, each letting a game's own
+  result leak into its features, and ran both checks on every version: the current {nFeatures}-column model, trained on{' '}
+  {nc.seasons.check2_train.replace('-', '–')} games and scored on {nc.seasons.check2_eval} games.
+</p>
+
+<div class="scroll" role="region" aria-labelledby="leak-caption" tabindex="0">
+  <table class="nfl-table leak">
+    <caption id="leak-caption" class="visually-hidden">
+      Negative control: what each deliberate leak changed, and whether each check caught it
+    </caption>
+    <thead>
+      <tr>
+        <th scope="col">What I broke</th>
+        <th scope="col">Model columns affected</th>
+        <th scope="col">Timestamp check</th>
+        <th scope="col">Label-shuffle check</th>
+        <th scope="col">Accuracy on the real labels</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        nc.conditions.map((c) => (
+          <tr class:list={[{ control: c.role === 'control' }]}>
+            <th scope="row">
+              {name(c)}
+              <code class="id">{c.condition}</code>
+            </th>
+            <td class="num">{c.n_columns_changed === 0 ? 'None' : c.n_columns_changed}</td>
+            <td>
+              <b>{timestamp(c)}</b>
+            </td>
+            <td>{shuffle(c)}</td>
+            <td class="num">
+              {pct(c.check2.current_67.contrast_accuracy)}
+              {suspicious(c) && <span class="flag">above {pct(SUSPICIOUS_ACCURACY, 0)}: suspicious</span>}
+            </td>
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</div>
+
+<p class="small">{nc.note}</p>
+<p class="small">
+  <a href={scriptUrl}>The experiment's script</a> · <a href={resultsUrl}>its full results</a> · the control ran on commit{' '}
+  <code>{nc.source_git_head.slice(0, 7)}</code>.
+</p>
+
+<style>
+  .intro {
+    max-width: 44rem;
+    margin-bottom: var(--space-3);
+  }
+  .leak th[scope='row'] {
+    white-space: normal;
+    min-width: 13rem;
+  }
+  .id {
+    display: block;
+    margin-top: 0.15rem;
+    font-weight: 400;
+    font-size: 0.8em;
+    color: var(--text-muted);
+  }
+  .leak td {
+    min-width: 7rem;
+  }
+  .control {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+  .flag {
+    display: block;
+    font-family: var(--font-body);
+    font-size: 0.9em;
+    color: var(--text-muted);
+  }
+  .small {
+    margin-top: var(--space-2);
+    max-width: 44rem;
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+  .small a {
+    display: inline-block;
+    padding-block: 0.35rem;
+  }
+</style>

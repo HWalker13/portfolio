@@ -1,12 +1,13 @@
 ---
 import type { CollectionEntry } from 'astro:content';
 import ProofLinks from './ProofLinks.astro';
+import { fillProjectCopy } from '../data/nfl';
 
 interface Props {
   entry: CollectionEntry<'projects'>;
 }
 const { entry } = Astro.props;
-const { title, track, tagline, proof } = entry.data;
+const { title, track, tagline, proof } = fillProjectCopy(entry.data);
 // Jumps to this project's section in the reel on the same page.
 const href = `#${entry.id}`;
 // Each track's record gets its own label color.

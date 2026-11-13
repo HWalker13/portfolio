@@ -6,6 +6,9 @@ import { z } from 'astro/zod';
   One Markdown file per project. Frontmatter feeds the tracklist and the top of each
   liner-notes page; the Markdown body is the liner notes themselves (added in M4).
 
+  Copy may contain {{nfl.*}} tokens (src/data/nfl/tokens.ts). They are filled when the page
+  renders, so numbers always come from the current NFL data file.
+
   `headlineStats[].context` is required on purpose: a number can't reach the page
   without its baseline or context next to it.
 */
@@ -46,6 +49,8 @@ const projects = defineCollection({
       shows a static card: the name, where it's live, and a button to it. The poster frame is required, so a
       video can never show up as a blank box.
     */
+    /** A full results page beyond the liner notes (NFL only). Linked from the reel card. */
+    results: z.string().startsWith('/').endsWith('/').optional(),
     video: z
       .object({
         webm: z.string().startsWith('/').optional(),

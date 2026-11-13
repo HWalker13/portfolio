@@ -4,7 +4,8 @@
   Header facts come from frontmatter; the five sections come from the Markdown body.
 */
 import type { GetStaticPaths } from 'astro';
-import { getCollection, render, type CollectionEntry } from 'astro:content';
+import { getCollection, type CollectionEntry } from 'astro:content';
+import { fillNflHtml, fillProjectCopy } from '../../data/nfl';
 import Base from '../../layouts/Base.astro';
 import Footer from '../../components/Footer.astro';
 import ProofLinks from '../../components/ProofLinks.astro';
@@ -26,8 +27,13 @@ interface Props {
 }
 
 const { entry, prev, next } = Astro.props;
-const { title, subtitle, side, track, tagline, role, date, stack, proof } = entry.data;
-const { Content } = await render(entry);
+const { title, subtitle, side, track, tagline, role, date, stack, proof } = fillProjectCopy(entry.data);
+/*
+  The body is the loader's rendered HTML with {{nfl.*}} tokens filled in here, at render time,
+  so a re-synced data file always shows (the content cache can't keep stale numbers).
+*/
+if (entry.rendered?.html === undefined) throw new Error(`No rendered Markdown for ${entry.id}`);
+const body = fillNflHtml(entry.rendered.html);
 ---
 
 <Base title={`${title}: liner notes`} description={tagline} ogType="article">
@@ -74,7 +80,7 @@ const { Content } = await render(entry);
 
       <Ribbon class="notes-ribbon">
         <div class="prose">
-          <Content />
+          <Fragment set:html={body} />
         </div>
       </Ribbon>
 

@@ -1,0 +1,223 @@
+---
+/*
+  Headline comparison: how often each strategy picked the winner, in three evaluations.
+  Rendered at build time; no client JS.
+
+  Each row is HTML label + an SVG track + HTML value. Only the bars are SVG, stretched to the
+  track (preserveAspectRatio="none", strokes non-scaling), so the text stays real text at full
+  size on a 320px phone instead of shrinking with a scaled-down SVG.
+
+  The visual is aria-hidden; screen readers get the table below it, which has every number.
+  Identity is never color alone: every bar sits on a row that names it.
+*/
+import type { HeadlineGroup } from '../../data/nfl/derive';
+import { STRATEGY_LABEL, barGeometry } from '../../data/nfl/derive';
+import { ciPct, kOfN, pct } from '../../data/nfl/format';
+
+interface Props {
+  groups: HeadlineGroup[];
+  /** Visible group headings, keyed by group id (the page owns the wording). */
+  headings: Record<HeadlineGroup['id'], string>;
+  caption: string;
+}
+const { groups, headings, caption } = Astro.props;
+const W = 1000;
+const TICKS = [0, 0.25, 0.5, 0.75, 1];
+const x = (v: number) => (v * W).toFixed(1);
+---
+
+<figure class="bars">
+  <div class="visual" aria-hidden="true">
+    {
+      groups.map((g) => (
+        <div class="group">
+          <p class="group-title">{headings[g.id]}</p>
+          {g.rows.map((r) => {
+            const b = barGeometry(r.rate);
+            return (
+              <div class:list={['row', `row--${r.strategy}`]}>
+                <span class="label">{STRATEGY_LABEL[r.strategy]}</span>
+                <svg class="track" viewBox={`0 0 ${W} 30`} preserveAspectRatio="none">
+                  <title>{`${STRATEGY_LABEL[r.strategy]}: ${pct(r.rate)} (${kOfN(r.rate)} games), 95% CI ${ciPct(r.rate.ci95)}`}</title>
+                  {TICKS.slice(1, -1).map((t) => (
+                    <line class:list={['grid', { half: t === 0.5 }]} x1={x(t)} x2={x(t)} y1="0" y2="30" vector-effect="non-scaling-stroke" />
+                  ))}
+                  <rect class="bar" x="0" y="2" width={x(b.value)} height="15" />
+                  <line class="ci" x1={x(b.lo)} x2={x(b.hi)} y1="24" y2="24" vector-effect="non-scaling-stroke" />
+                  <line class="ci" x1={x(b.lo)} x2={x(b.lo)} y1="20" y2="28" vector-effect="non-scaling-stroke" />
+                  <line class="ci" x1={x(b.hi)} x2={x(b.hi)} y1="20" y2="28" vector-effect="non-scaling-stroke" />
+                </svg>
+                <span class="value">
+                  <b>{pct(r.rate)}</b> <span class="range">{ciPct(r.rate.ci95)}</span>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      ))
+    }
+    <div class="axis">
+      <span class="label"></span>
+      <span class="ticks">
+        {TICKS.map((t) => <span style={`left: ${t * 100}%`}>{pct(t, 0)}</span>)}
+      </span>
+      <span class="value"></span>
+    </div>
+    <p class="key">
+      Bar: share of games picked right. Whisker: 95% confidence interval. Dashed line: a coin flip.
+    </p>
+  </div>
+
+  <table class="visually-hidden">
+    <caption>{caption}</caption>
+    <thead>
+      <tr>
+        <th scope="col">Test</th>
+        {groups[0].rows.map((r) => <th scope="col">{STRATEGY_LABEL[r.strategy]}</th>)}
+      </tr>
+    </thead>
+    <tbody>
+      {
+        groups.map((g) => (
+          <tr>
+            <th scope="row">{headings[g.id]}</th>
+            {g.rows.map((r) => (
+              <td>{`${pct(r.rate)}: ${kOfN(r.rate)} games right, 95% CI ${ciPct(r.rate.ci95)}`}</td>
+            ))}
+          </tr>
+        ))
+      }
+    </tbody>
+  </table>
+</figure>
+
+<style>
+  .bars {
+    margin-block: var(--space-4);
+  }
+  .group + .group {
+    margin-top: var(--space-4);
+  }
+  .group-title {
+    margin-bottom: var(--space-2);
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    font-size: var(--step-1);
+  }
+
+  /* label | track | value. On phones the label sits above its bar. */
+  .row,
+  .axis {
+    display: grid;
+    grid-template-columns: 9.5rem 1fr 8.5rem;
+    align-items: center;
+    gap: 0 var(--space-3);
+  }
+  .row {
+    min-height: 2.25rem;
+  }
+  /* Phones: label and value share a line, and the bar gets the full width below them. */
+  @media (max-width: 560px) {
+    .row {
+      grid-template-columns: 1fr auto;
+      grid-template-areas: 'label value' 'track track';
+      margin-top: var(--space-2);
+    }
+    .row .label {
+      grid-area: label;
+    }
+    .row .value {
+      grid-area: value;
+    }
+    .row .track {
+      grid-area: track;
+    }
+    .axis {
+      grid-template-columns: 1fr;
+    }
+    .axis .label,
+    .axis .value {
+      display: none;
+    }
+  }
+  .label {
+    font-weight: 600;
+    font-size: var(--step--1);
+  }
+  .row--model .label,
+  .row--model .value b {
+    font-weight: 800;
+  }
+  .value {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .range {
+    color: var(--text-muted);
+  }
+
+  .track {
+    display: block;
+    width: 100%;
+    height: 30px;
+    overflow: visible;
+  }
+  .grid {
+    stroke: var(--rule);
+    stroke-width: 1;
+  }
+  .grid.half {
+    stroke: var(--text-muted);
+    stroke-dasharray: 3 3;
+  }
+  .bar {
+    fill: var(--chart-model);
+  }
+  .row--home .bar {
+    fill: var(--chart-home);
+  }
+  .row--vegas .bar {
+    fill: var(--chart-vegas);
+  }
+  .ci {
+    stroke: var(--text);
+    stroke-width: 1.5;
+  }
+
+  .axis {
+    margin-top: var(--space-2);
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+  .ticks {
+    position: relative;
+    height: 1.2em;
+  }
+  .ticks span {
+    position: absolute;
+    transform: translateX(-50%);
+  }
+  .ticks span:first-child {
+    transform: none;
+  }
+  .ticks span:last-child {
+    transform: translateX(-100%);
+  }
+  .key {
+    margin-top: var(--space-3);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+
+  @media (forced-colors: active) {
+    .bar,
+    .row--home .bar,
+    .row--vegas .bar {
+      fill: CanvasText;
+    }
+  }
+</style>

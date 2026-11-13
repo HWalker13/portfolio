@@ -1,0 +1,65 @@
+---
+/* Where every number on the page came from: the export's time, its source commit, and the audit. */
+import type { SiteData } from '../../data/nfl/schema';
+import { dayTime } from '../../data/nfl/format';
+
+interface Props {
+  data: SiteData;
+  repo: string;
+}
+const { data, repo } = Astro.props;
+const hash = data.source_commit.hash;
+---
+
+<dl class="prov">
+  <div>
+    <dt>Data exported</dt>
+    <dd><time datetime={data.generated_at}>{dayTime(data.generated_at)}</time></dd>
+  </div>
+  <div>
+    <dt>Live results as of</dt>
+    <dd><time datetime={data.live_2026.as_of_utc}>{dayTime(data.live_2026.as_of_utc)}</time></dd>
+  </div>
+  <div>
+    <dt>Source commit</dt>
+    <dd>
+      <a href={`${repo}/commit/${hash}`}><code>{hash.slice(0, 7)}</code><span class="visually-hidden"> on GitHub</span></a>
+      {data.source_commit.dirty && ' (built with uncommitted changes)'}
+    </dd>
+  </div>
+  <div>
+    <dt>Audit</dt>
+    <dd><a href={`${repo}/blob/${hash}/audit/AUDIT.md`}>Metric audit (AUDIT.md) at that commit</a></dd>
+  </div>
+</dl>
+<p class="small">
+  This page is built from the project's exported data file (schema {data.schema_version}). No number on it is typed by hand.
+</p>
+
+<style>
+  .prov {
+    display: grid;
+    gap: var(--space-3) var(--space-5);
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  }
+  dt {
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+  dd {
+    margin: 0.15rem 0 0;
+    font-weight: 600;
+  }
+  dd a {
+    display: inline-block;
+    padding-block: 0.35rem;
+  }
+  .small {
+    margin-top: var(--space-3);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+  }
+</style>

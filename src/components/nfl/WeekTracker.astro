@@ -1,0 +1,113 @@
+---
+/*
+  Live 2026, one row per week from the first official week. Missed and partial weeks get a row
+  like any other, with the gap written out; nothing is dropped. Status is a word plus a shape,
+  never color alone.
+*/
+import type { WeekRow } from '../../data/nfl/derive';
+import { weekStatus } from '../../data/nfl/derive';
+import { signed } from '../../data/nfl/format';
+
+interface Props {
+  rows: WeekRow[];
+  firstWeek: number;
+}
+const { rows, firstWeek } = Astro.props;
+const before = firstWeek > 2 ? `Weeks 1–${firstWeek - 1}` : 'Week 1';
+---
+
+<p class="note">
+  {before} came before the live test started, so they aren't part of the record. Every week since is listed, including the
+  ones I missed.
+</p>
+
+<div class="scroll" role="region" aria-labelledby="weeks-caption" tabindex="0">
+  <table class="nfl-table weeks">
+    <caption id="weeks-caption" class="visually-hidden">Live 2026 results by week</caption>
+    <thead>
+      <tr>
+        <th scope="col">Week</th>
+        <th scope="col">Status</th>
+        <th scope="col">Games predicted</th>
+        <th scope="col">Picks right</th>
+        <th scope="col">Paper bets (won-lost-void)</th>
+        <th scope="col">Bet profit (units)</th>
+      </tr>
+    </thead>
+    <tbody>
+      {
+        rows.map((r) => {
+          const w = r.week;
+          const s = weekStatus(w);
+          const b = r.bets;
+          const settled = b.wins + b.losses + b.voids;
+          return (
+            <tr class:list={[`st--${s.kind}`]}>
+              <th scope="row">{w.week}</th>
+              <td class="status">
+                <svg class="mark" viewBox="0 0 16 16" aria-hidden="true">
+                  {s.kind === 'graded' && <circle cx="8" cy="8" r="6" class="fill" />}
+                  {s.kind === 'partial' && (
+                    <>
+                      <circle cx="8" cy="8" r="6" class="ring" />
+                      <path d="M8 2 A6 6 0 0 1 8 14 Z" class="fill" />
+                    </>
+                  )}
+                  {s.kind === 'missed' && <path d="M3 3 L13 13 M13 3 L3 13" class="cross" />}
+                  {s.kind === 'pending' && <circle cx="8" cy="8" r="6" class="ring dashed" />}
+                </svg>
+                <span>
+                  <b>{s.label}</b>: {s.detail}
+                </span>
+              </td>
+              <td>{`${w.predicted} of ${w.scheduled}`}</td>
+              <td>{w.status === 'missed' ? '–' : w.decided + w.ties === 0 ? 'Not played yet' : `${r.picksRight} of ${w.decided}${w.ties ? ` (+${w.ties} tie)` : ''}`}</td>
+              <td>{settled === 0 && b.pending === 0 ? '–' : `${b.wins}-${b.losses}-${b.voids}${b.pending ? `, ${b.pending} pending` : ''}`}</td>
+              <td>{settled === 0 ? '–' : signed(b.units, 2)}</td>
+            </tr>
+          );
+        })
+      }
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .note {
+    max-width: 44rem;
+    margin-bottom: var(--space-3);
+  }
+  .status {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+    min-width: 15rem;
+  }
+  .mark {
+    flex: none;
+    width: 0.9rem;
+    height: 0.9rem;
+    transform: translateY(0.1rem);
+  }
+  .mark .fill {
+    fill: var(--text);
+  }
+  .mark .ring {
+    fill: none;
+    stroke: var(--text);
+    stroke-width: 1.6;
+  }
+  .mark .dashed {
+    stroke-dasharray: 3 2.3;
+  }
+  .mark .cross {
+    stroke: var(--text);
+    stroke-width: 2.2;
+    stroke-linecap: round;
+  }
+  /* Gaps stand out without relying on color: heavier rule and an off-paper row. */
+  .st--missed,
+  .st--partial {
+    background: color-mix(in srgb, var(--text) 6%, transparent);
+  }
+</style>
