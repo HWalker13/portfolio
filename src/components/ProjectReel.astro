@@ -3,7 +3,8 @@
   Projects reel: one section per screen, on chocolate, with a thick orange / mustard / brown
   supergraphic wave flowing down behind them.
 
-  Left: giant name, one line, 2 stats, proof links, and a "01 / 04" counter with up/down buttons.
+  Left: a "01 / 04" counter with up/down buttons, the giant name with a decorative track length
+  and the project's own record label, one line, 2 stats, proof links.
   Right (desktop, motion OK): a curved wheel of demo cards in a sticky column. Native page scroll
   drives it (src/scripts/reel.ts): the script reads scrollY and rotates the wheel, it never
   scrolls the page itself. Under 768px or with reduced motion, the wheel is hidden and each
@@ -15,6 +16,7 @@
 import { getCollection } from 'astro:content';
 import ProofLinks from './ProofLinks.astro';
 import VideoCard from './VideoCard.astro';
+import ProjectLabel from './ProjectLabel.astro';
 import { fillProjectCopy } from '../data/nfl';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
@@ -62,7 +64,7 @@ const STROKES = [
     {
       projects.map((entry, i) => {
         // {{nfl.*}} tokens in the copy become numbers from the NFL data file here, at render time.
-        const { title, subtitle, side, track, tagline, headlineStats, proof, results } = fillProjectCopy(entry.data);
+        const { title, subtitle, side, track, length, tagline, headlineStats, proof, results } = fillProjectCopy(entry.data);
         const prev = i === 0 ? { id: 'tracklist', label: 'Back to the tracklist' } : { id: projects[i - 1].id, label: `Previous project: ${projects[i - 1].data.title}` };
         const next = i === n - 1 ? { id: 'about', label: 'Next: about me' } : { id: projects[i + 1].id, label: `Next project: ${projects[i + 1].data.title}` };
         return (
@@ -92,9 +94,19 @@ const STROKES = [
 
               <h3 id={`${entry.id}-title`} tabindex="-1">
                 {title}
+                {/* Decorative, like a runtime printed on a sleeve: not a metric, hidden from screen readers */}
+                <span class="length" aria-hidden="true">
+                  {length}
+                </span>
               </h3>
               {subtitle && <p class="subtitle">{subtitle}</p>}
-              <p class="line">{tagline}</p>
+              {/* The record sits beside the body-text line, never beside the giant title, so long names keep their width */}
+              <div class="lead">
+                <p class="line">{tagline}</p>
+                <div class="record">
+                  <ProjectLabel entry={entry} />
+                </div>
+              </div>
 
               <ul class="stats">
                 {headlineStats.map((s) => (
@@ -298,6 +310,27 @@ const STROKES = [
     color: var(--reel-muted);
   }
 
+  .lead {
+    margin-top: var(--space-3);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-4);
+  }
+  .record {
+    width: clamp(4.5rem, 3rem + 4vw, 7rem);
+    transform: rotate(-12deg);
+  }
+  .length {
+    margin-left: 0.4em;
+    font-family: var(--font-mono);
+    font-size: var(--step-0);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    vertical-align: 0.15em;
+    color: var(--reel-muted);
+    white-space: nowrap;
+  }
   h3 {
     margin-top: var(--space-4);
     font-size: clamp(2.6rem, 1.4rem + 5vw, 5.6rem);
@@ -317,7 +350,6 @@ const STROKES = [
     color: var(--reel-muted);
   }
   .line {
-    margin-top: var(--space-3);
     font-size: var(--step-1);
     line-height: 1.4;
   }

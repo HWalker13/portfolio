@@ -7,7 +7,7 @@
 
   Run: npm run contrast   (exits 1 if any pair misses its requirement)
 */
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 
 const BODY = 4.5; // AA normal text
 const UI = 3; // AA non-text (focus rings, control boundaries)
@@ -123,6 +123,16 @@ const plaque = byDetail('plaque');
 check(`label detail: ${plaque.album} title on the white street-sign plaque`, toRgb(plaque.label.ink), toRgb('#FFFFFF'), BODY);
 const notebook = byDetail('notebook');
 check(`label detail: ${notebook.album} artist over a ruled line (#7D2F10)`, toRgb(notebook.label.ink), toRgb('#7D2F10'), BODY);
+
+// Project labels in the reel: title/artist ink on each label's background (project frontmatter).
+const projectsDir = new URL('../src/content/projects/', import.meta.url);
+for (const f of readdirSync(projectsDir).filter((n) => n.endsWith('.md'))) {
+  const fm = readFileSync(new URL(f, projectsDir), 'utf8').split(/^---$/m)[1];
+  const field = (k) => fm.match(new RegExp(`^\\s+${k}:\\s*'(#[0-9A-Fa-f]{6})'`, 'm'))?.[1];
+  const [bg, ink] = [field('bg'), field('ink')];
+  if (!bg || !ink) throw new Error(`${f}: label.bg / label.ink missing`);
+  check(`project label: ${f}`, toRgb(ink), toRgb(bg), BODY);
+}
 
 console.log(rows.join('\n'));
 

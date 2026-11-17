@@ -1,11 +1,11 @@
 ---
 /*
   Quick tracklist: the back of the album sleeve, lying across the orange stage's edge.
-  All four projects in one compact list (number, name, one line, proof links), so a recruiter
-  sees everything in five seconds. Each name jumps to that project's section in the reel.
+  A compact back-cover index: track number, name, a dotted leader and a 2–4 word tag, in
+  Side A / Side B columns. Each row is one link that jumps to the project's section in the reel,
+  where the description, stats and proof links live (they are not repeated here).
 */
 import { getCollection } from 'astro:content';
-import Track from './Track.astro';
 import Ribbon from './Ribbon.astro';
 
 const projects = (await getCollection('projects')).sort((a, b) => a.data.track - b.data.track);
@@ -17,39 +17,40 @@ const sides = (['A', 'B'] as const).map((side) => ({
 
 <section class="sleeve container" id="tracklist" aria-labelledby="tracklist-title">
   <div class="sleeve-inner sleeve-inner--ribbon">
-    <div class="sleeve-head">
-      <h2 id="tracklist-title">Tracklist</h2>
-      <!-- DRAFT: Holden to edit -->
-      <p class="lede">Four projects. Each one links to something you can check yourself: an app, a package or a repo.</p>
-    </div>
+    <h2 id="tracklist-title">Tracklist</h2>
     <Ribbon class="tracklist-ribbon">
-    <div class="sides">
-      {
-        sides.map(({ side, tracks }) => (
-          <section class="side" aria-labelledby={`side-${side}`}>
-            <h3 id={`side-${side}`}>
-              Side {side}
-            </h3>
-            <ol class="tracks" start={tracks[0]?.data.track}>
-              {tracks.map((entry) => (
-                <Track entry={entry} />
-              ))}
-            </ol>
-          </section>
-        ))
-      }
-    </div>
+      <div class="sides">
+        {
+          sides.map(({ side, tracks }) => (
+            <section class="side" aria-labelledby={`side-${side}`}>
+              <h3 id={`side-${side}`}>Side {side}</h3>
+              <ol class="tracks" start={tracks[0]?.data.track}>
+                {tracks.map(({ id, data }) => (
+                  <li>
+                    <a class="row" href={`#${id}`}>
+                      <span class="num" aria-hidden="true">
+                        {data.track}
+                      </span>
+                      <span class="visually-hidden">Track {data.track}: </span>
+                      <span class="name">{data.title}</span>
+                      <span class="leader" aria-hidden="true" />
+                      <span class="visually-hidden">, </span>
+                      <span class="tag">{data.tag}</span>
+                    </a>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          ))
+        }
+      </div>
     </Ribbon>
   </div>
 </section>
 
 <style>
-  .lede {
-    margin-top: var(--space-3);
-    color: var(--text-muted);
-  }
   .sleeve :global(.tracklist-ribbon) {
-    margin-top: var(--space-4);
+    margin-top: var(--space-3);
   }
   /* Room below the sleeve so its shadow falls on cream, not on the eyes band */
   .sleeve {
@@ -58,24 +59,97 @@ const sides = (['A', 'B'] as const).map((side) => ({
 
   .sides {
     display: grid;
-    gap: var(--space-5);
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-4);
   }
-  @media (min-width: 960px) {
+  .side {
+    container-type: inline-size;
+  }
+  @media (min-width: 720px) {
     .sides {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: var(--space-6);
     }
   }
   h3 {
-    font-size: var(--step-1);
+    font-size: var(--step-0);
     text-transform: uppercase;
-    letter-spacing: 0.08em;
-    padding-bottom: var(--space-2);
+    letter-spacing: 0.12em;
+    padding-bottom: var(--space-1);
     border-bottom: 3px solid var(--text);
   }
   .tracks {
     list-style: none;
     padding: 0;
-    margin-top: var(--space-2);
+  }
+  .tracks li + li {
+    border-top: 1px solid var(--rule);
+  }
+
+  /* One row = one link: number, name, dotted leader, tag. 44px+ tall for touch. */
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.1rem 0.6rem;
+    min-height: 44px;
+    padding-block: 0.55rem;
+    color: var(--text);
+    text-decoration: none;
+  }
+  .num {
+    flex: none;
+    min-width: 1.4ch;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: var(--step--1);
+    color: var(--link);
+  }
+  .name {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+    flex: none;
+    font-size: 1.2rem;
+    line-height: 1.15;
+    text-decoration: underline;
+    text-decoration-color: transparent;
+    text-decoration-thickness: 0.1em;
+    text-underline-offset: 0.15em;
+  }
+  .leader {
+    flex: 1 1 1.5rem;
+    min-width: 1.5rem;
+    border-bottom: 2px dotted color-mix(in srgb, var(--text) 45%, transparent);
+  }
+  /* If a tag ever doesn't fit beside the name, it drops to the next line instead of squeezing it */
+  .tag {
+    flex: none;
+    margin-left: auto;
+    font-family: var(--font-mono);
+    font-size: var(--step--1);
+    color: var(--text-muted);
+    white-space: nowrap;
+  }
+  /*
+    Narrow columns (phones, tablets): every row is two lines, number and name, then the leader
+    running to the tag, so the names never wrap mid-title and the rows stay alike.
+  */
+  @container (max-width: 25rem) {
+    .name {
+      flex: 1 1 calc(100% - 3rem);
+    }
+    .leader {
+      margin-left: calc(1.4ch + 0.6rem);
+    }
+  }
+  .row:hover .name,
+  .row:focus-visible .name {
+    color: var(--link);
+    text-decoration-color: var(--burnt-orange);
+  }
+  .row:hover .leader,
+  .row:focus-visible .leader {
+    border-bottom-color: var(--burnt-orange);
   }
 </style>

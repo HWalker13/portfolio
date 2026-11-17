@@ -47,13 +47,13 @@ const offending = (s: string) =>
     .filter((l) => /\d/.test(l));
 
 /**
-  Markdown: drop structure that isn't copy (the track number, links and asset paths in frontmatter,
-  Markdown link targets), then tags (SVG coordinates).
+  Markdown: drop structure that isn't copy (the track number, the decorative track length, label
+  colors, links and asset paths in frontmatter, Markdown link targets), then tags (SVG coordinates).
 */
 function markdownText(src: string): string {
   const s = src
     .replace(/^track:\s*\d+\s*$/m, ' ')
-    .replace(/^\s*(url|webm|mp4|poster|results):.*$/gm, ' ')
+    .replace(/^\s*(url|webm|mp4|poster|results|length|bg|ink|accent2?):.*$/gm, ' ')
     .replace(/\]\([^)]*\)/g, ']');
   return stripCommon(s).replace(/<[^>]*>/g, ' ');
 }

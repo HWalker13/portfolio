@@ -1,0 +1,71 @@
+---
+/*
+  The printed band across the top of a record label (stripes, dots, waves, ...), shared by the
+  turntable's record labels (RecordLabels.astro) and the project labels in the reel
+  (ProjectLabel.astro). Drawn in label units: centered on (0, 0), radius 76, clipped by the caller.
+*/
+interface Props {
+  motif: string;
+  bg: string;
+  accent: string;
+  accent2: string;
+}
+const { motif, bg, accent, accent2 } = Astro.props;
+const LR = 76;
+const range = (from: number, to: number, step: number) =>
+  Array.from({ length: Math.floor((to - from) / step) + 1 }, (_, k) => from + k * step);
+---
+
+  {motif === 'stripes' && (
+    <>
+      <rect x={-LR} y="-71" width={LR * 2} height="5" fill={accent} />
+      <rect x={-LR} y="-64" width={LR * 2} height="5" fill="#E0A526" />
+      <rect x={-LR} y="-57" width={LR * 2} height="5" fill={accent2} />
+    </>
+  )}
+  {motif === 'dots' &&
+    [-67, -59, -51].map((y) => range(-44, 44, 11).map((x) => <circle cx={x} cy={y} r="2.3" fill={accent} />))}
+  {motif === 'bars' &&
+    [8, 14, 10, 18, 12, 20, 9, 15, 11].map((h, k) => (
+      <rect x={-38 + k * 9} y={-49 - h} width="5" height={h} rx="1" fill={k === 5 ? accent2 : accent} />
+    ))}
+  {motif === 'moon' && (
+    <>
+      <circle cx="0" cy="-60" r="10" fill={accent} />
+      <circle cx="4.5" cy="-63" r="9" fill={bg} />
+      {[[-26, -59, 1.7], [24, -65, 1.5], [31, -54, 1.2], [-17, -68, 1.2], [-34, -51, 1]].map(([x, y, r]) => (
+        <circle cx={x} cy={y} r={r} fill={accent2} />
+      ))}
+    </>
+  )}
+  {motif === 'waves' &&
+    [
+      [-63, accent],
+      [-54, accent2],
+    ].map(([y, c]) => (
+      <path
+        d={`M -66 ${y} ${range(0, 10, 1).map((k) => `q 6.6 ${k % 2 ? 5 : -5} 13.2 0`).join(' ')}`}
+        fill="none"
+        stroke={c as string}
+        stroke-width="2.6"
+        stroke-linecap="round"
+      />
+    ))}
+  {motif === 'checker' &&
+    [-67, -60].map((y, row) =>
+      range(-49, 42, 7).map((x, k) => (
+        <rect x={x} y={y} width="7" height="7" fill={(k + row) % 2 ? accent : accent2} />
+      )),
+    )}
+  {motif === 'diamonds' &&
+    range(-48, 48, 12).map((x, k) => (
+      <polygon points={`${x},-66 ${x + 5.5},-59 ${x},-52 ${x - 5.5},-59`} fill={k % 2 ? accent2 : accent} />
+    ))}
+  {motif === 'zigzag' &&
+    range(-66, 54, 12).map((x, k) => (
+      <polygon points={`${x},-52 ${x + 6},-65 ${x + 12},-52`} fill={k % 2 ? accent2 : accent} />
+    ))}
+  {motif === 'scallops' &&
+    range(-60, 60, 12).map((x, k) => (
+      <path d={`M ${x - 6} -53 A 6 6 0 0 1 ${x + 6} -53 Z`} fill={k % 2 ? accent2 : accent} />
+    ))}

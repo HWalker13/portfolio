@@ -3,8 +3,8 @@ import { glob } from 'astro/loaders';
 import { z } from 'astro/zod';
 
 /*
-  One Markdown file per project. Frontmatter feeds the tracklist and the top of each
-  liner-notes page; the Markdown body is the liner notes themselves (added in M4).
+  One Markdown file per project. Frontmatter feeds the tracklist index, the reel and the top of
+  each liner-notes page; the Markdown body is the liner notes themselves.
 
   Copy may contain {{nfl.*}} tokens (src/data/nfl/tokens.ts). They are filled when the page
   renders, so numbers always come from the current NFL data file.
@@ -20,6 +20,24 @@ const projects = defineCollection({
     track: z.number().int().min(1),
     side: z.enum(['A', 'B']),
     tagline: z.string().max(200),
+    /** The tracklist index entry: 2–4 words after the dotted leader ("iOS app, live"). */
+    tag: z
+      .string()
+      .max(24)
+      .refine((s) => {
+        const words = s.trim().split(/\s+/).length;
+        return words >= 2 && words <= 4;
+      }, 'tag must be 2–4 words'),
+    /** Playful "track length" next to the reel title. Decorative, not a metric. */
+    length: z.string().regex(/^\d{1,2}:[0-5]\d$/),
+    /** The project's record label in the reel (ProjectLabel.astro). ink on bg is in `npm run contrast`. */
+    label: z.object({
+      bg: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+      ink: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+      accent: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+      accent2: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
+      motif: z.enum(['stripes', 'dots', 'bars', 'moon', 'waves', 'checker', 'diamonds', 'zigzag', 'scallops']),
+    }),
     role: z.string().optional(),
     date: z.string().optional(),
     stack: z.array(z.string()).min(1),

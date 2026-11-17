@@ -7,6 +7,7 @@
   the current one is displayed. turntable.ts switches the turntable's; PinnedRecord follows it.
 */
 import records from '../data/records.json';
+import LabelMotif from './LabelMotif.astro';
 
 interface Props {
   /** Prefix for clipPath ids, unique per instance on the page */
@@ -64,59 +65,7 @@ const range = (from: number, to: number, step: number) =>
       </clipPath>
       <circle r={LR} fill={l.label.bg} />
       <g clip-path={`url(#${uid}-lc-${l.i})`}>
-        {l.label.motif === 'stripes' && (
-          <>
-            <rect x={-LR} y="-71" width={LR * 2} height="5" fill={l.label.accent} />
-            <rect x={-LR} y="-64" width={LR * 2} height="5" fill="#E0A526" />
-            <rect x={-LR} y="-57" width={LR * 2} height="5" fill={l.label.accent2} />
-          </>
-        )}
-        {l.label.motif === 'dots' &&
-          [-67, -59, -51].map((y) => range(-44, 44, 11).map((x) => <circle cx={x} cy={y} r="2.3" fill={l.label.accent} />))}
-        {l.label.motif === 'bars' &&
-          [8, 14, 10, 18, 12, 20, 9, 15, 11].map((h, k) => (
-            <rect x={-38 + k * 9} y={-49 - h} width="5" height={h} rx="1" fill={k === 5 ? l.label.accent2 : l.label.accent} />
-          ))}
-        {l.label.motif === 'moon' && (
-          <>
-            <circle cx="0" cy="-60" r="10" fill={l.label.accent} />
-            <circle cx="4.5" cy="-63" r="9" fill={l.label.bg} />
-            {[[-26, -59, 1.7], [24, -65, 1.5], [31, -54, 1.2], [-17, -68, 1.2], [-34, -51, 1]].map(([x, y, r]) => (
-              <circle cx={x} cy={y} r={r} fill={l.label.accent2} />
-            ))}
-          </>
-        )}
-        {l.label.motif === 'waves' &&
-          [
-            [-63, l.label.accent],
-            [-54, l.label.accent2],
-          ].map(([y, c]) => (
-            <path
-              d={`M -66 ${y} ${range(0, 10, 1).map((k) => `q 6.6 ${k % 2 ? 5 : -5} 13.2 0`).join(' ')}`}
-              fill="none"
-              stroke={c as string}
-              stroke-width="2.6"
-              stroke-linecap="round"
-            />
-          ))}
-        {l.label.motif === 'checker' &&
-          [-67, -60].map((y, row) =>
-            range(-49, 42, 7).map((x, k) => (
-              <rect x={x} y={y} width="7" height="7" fill={(k + row) % 2 ? l.label.accent : l.label.accent2} />
-            )),
-          )}
-        {l.label.motif === 'diamonds' &&
-          range(-48, 48, 12).map((x, k) => (
-            <polygon points={`${x},-66 ${x + 5.5},-59 ${x},-52 ${x - 5.5},-59`} fill={k % 2 ? l.label.accent2 : l.label.accent} />
-          ))}
-        {l.label.motif === 'zigzag' &&
-          range(-66, 54, 12).map((x, k) => (
-            <polygon points={`${x},-52 ${x + 6},-65 ${x + 12},-52`} fill={k % 2 ? l.label.accent2 : l.label.accent} />
-          ))}
-        {l.label.motif === 'scallops' &&
-          range(-60, 60, 12).map((x, k) => (
-            <path d={`M ${x - 6} -53 A 6 6 0 0 1 ${x + 6} -53 Z`} fill={k % 2 ? l.label.accent2 : l.label.accent} />
-          ))}
+        <LabelMotif motif={l.label.motif} bg={l.label.bg} accent={l.label.accent} accent2={l.label.accent2} />
         {l.underline && <rect x="-32" y="46" width="64" height="2.5" rx="1.25" fill={l.label.accent} />}
 
         {/*

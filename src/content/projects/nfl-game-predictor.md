@@ -2,6 +2,15 @@
 title: NFL Game Predictor
 track: 2
 side: A
+tag: 'ML, tested live'
+# Decorative track length beside the reel title (aria-hidden), not a metric
+length: '5:56'
+label:
+  bg: '#E0A526'
+  ink: '#3B2314'
+  accent: '#3B2314'
+  accent2: '#6B7B3A'
+  motif: checker
 # DRAFT: Holden to edit
 tagline: 'Predicts NFL winners. It beats the home-team baseline, loses to Vegas, and the write-up says so.'
 date: '2026'

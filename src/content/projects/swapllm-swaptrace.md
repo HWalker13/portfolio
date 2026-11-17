@@ -3,6 +3,15 @@ title: swapLLM + swaptrace
 subtitle: Two PyPI packages, one story
 track: 3
 side: B
+tag: '2 PyPI packages'
+# Decorative track length beside the reel title (aria-hidden), not a metric
+length: '4:12'
+label:
+  bg: '#F3E6CC'
+  ink: '#3B2314'
+  accent: '#D9622B'
+  accent2: '#4F7A93'
+  motif: zigzag
 # DRAFT: Holden to edit
 tagline: 'An LLM router that falls back across Groq, OpenAI and Anthropic, then the tracer I built after finding the router threw away its own retry data.'
 date: '2026'

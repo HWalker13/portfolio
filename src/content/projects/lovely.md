@@ -3,6 +3,15 @@ title: Lovely
 subtitle: 'Lovely: Relationship Growth (iOS)'
 track: 1
 side: A
+tag: 'iOS app, live'
+# Decorative track length beside the reel title (aria-hidden), not a metric
+length: '3:41'
+label:
+  bg: '#D9622B'
+  ink: '#1E140D'
+  accent: '#FBF4E4'
+  accent2: '#E0A526'
+  motif: scallops
 # DRAFT: Holden to edit
 tagline: 'A relationship-growth app, live on the App Store. I co-founded it and built the AI gateway, the security layer and subscription billing.'
 role: Co-Founder & Engineer, Lovely LLC

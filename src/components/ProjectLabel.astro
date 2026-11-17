@@ -1,0 +1,83 @@
+---
+/*
+  A small record for each project in the reel, with an original center label in the same style
+  as the turntable's (RecordLabels.astro): a printed motif band, the title, the "artist" and the
+  side, in a 70s label layout. Colors and motif come from the project's `label` frontmatter, and
+  every ink/background pair is in `npm run contrast`. Decorative (aria-hidden): the section's
+  heading already names the project.
+*/
+import type { CollectionEntry } from 'astro:content';
+import LabelMotif from './LabelMotif.astro';
+
+interface Props {
+  entry: CollectionEntry<'projects'>;
+}
+const { entry } = Astro.props;
+const { title, side, track, label } = entry.data;
+const uid = `pl-${entry.id}`;
+const LR = 76;
+
+// Same fitting rule as the turntable labels: two balanced lines for long titles.
+const words = title.split(' ');
+let lines = [title];
+if (title.length > 11 && words.length > 1) {
+  let bestMax = Infinity;
+  for (let i = 1; i < words.length; i++) {
+    const pair = [words.slice(0, i).join(' '), words.slice(i).join(' ')];
+    const m = Math.max(...pair.map((p) => p.length));
+    if (m < bestMax) [lines, bestMax] = [pair, m];
+  }
+}
+const longest = Math.max(...lines.map((l) => l.length));
+const titleSize = +Math.min(22, 118 / (longest * 0.58)).toFixed(2);
+const lineHeight = titleSize * 1.04;
+const lineY = lines.map((_, k) => +(-8 - (lines.length - 1 - k) * lineHeight).toFixed(2));
+const grooves = Array.from({ length: 6 }, (_, i) => 80 + i * 3.2);
+---
+
+<svg class="project-label" viewBox="-100 -100 200 200" aria-hidden="true" focusable="false">
+  <circle r="98" fill="#141110"></circle>
+  <g fill="none" stroke="#2c2622" stroke-width="0.9">
+    {grooves.map((r) => <circle r={r} />)}
+  </g>
+  <path d="M -64 -74 A 98 98 0 0 1 -8 -97 L -4 -80 A 80 80 0 0 0 -52 -60 Z" fill="#ffffff" fill-opacity="0.08"></path>
+  <clipPath id={uid}>
+    <circle r={LR} />
+  </clipPath>
+  <circle r={LR} fill={label.bg}></circle>
+  <g clip-path={`url(#${uid})`}>
+    <LabelMotif motif={label.motif} bg={label.bg} accent={label.accent} accent2={label.accent2} />
+  </g>
+  <circle r={LR - 1.5} fill="none" stroke={label.accent} stroke-width="1.5" stroke-opacity="0.85"></circle>
+  <text class="pl-title" fill={label.ink} font-size={titleSize} text-anchor="middle">
+    {lines.map((line, k) => <tspan x="0" y={lineY[k]}>{line}</tspan>)}
+  </text>
+  <text class="pl-artist" y="16" fill={label.ink} font-size="11" text-anchor="middle">Holden Anderson</text>
+  <rect x="-24" y="27" width="48" height="2.5" rx="1.25" fill={label.accent}></rect>
+  <text class="pl-side" y="45" fill={label.ink} font-size="9" text-anchor="middle" letter-spacing="1.6">
+    SIDE {side} · {track}
+  </text>
+  <circle r="3" fill="#1e140d"></circle>
+</svg>
+
+<style>
+  .project-label {
+    display: block;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.35));
+  }
+  .pl-title {
+    font-family: var(--font-display);
+    font-variation-settings: var(--display-variation);
+    font-weight: 800;
+  }
+  .pl-artist {
+    font-family: var(--font-body);
+    font-weight: 700;
+  }
+  .pl-side {
+    font-family: var(--font-mono);
+    font-weight: 700;
+  }
+</style>

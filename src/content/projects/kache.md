@@ -2,6 +2,15 @@
 title: Kache
 track: 4
 side: B
+tag: 'Redis from scratch'
+# Decorative track length beside the reel title (aria-hidden), not a metric
+length: '2:48'
+label:
+  bg: '#A9C4CC'
+  ink: '#3B2314'
+  accent: '#6E4527'
+  accent2: '#D9622B'
+  motif: dots
 # DRAFT: Holden to edit
 tagline: 'A Redis-like cache on raw TCP sockets and the standard library, built to survive crashes and network partitions.'
 date: '2026'

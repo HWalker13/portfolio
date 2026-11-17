@@ -70,8 +70,7 @@
 }
 /*
   Room for the supergraphic ribbon's vertical run (Ribbon.astro): 59px of bands,
-  16px from the sleeve edge, and 2.5rem of air before the content, so a track's record
-  can slide out (24px) without touching the bands.
+  16px from the sleeve edge, and 2.5rem of air before the content.
 */
 @media (min-width: 900px) {
   .sleeve-inner--ribbon {
