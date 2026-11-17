@@ -8,9 +8,9 @@ length: '2:48'
 label:
   bg: '#A9C4CC'
   ink: '#3B2314'
-  accent: '#6E4527'
+  accent: '#E0A526'
   accent2: '#D9622B'
-  motif: dots
+  art: key-bolt
 # DRAFT: Holden to edit
 tagline: 'A Redis-like cache on raw TCP sockets and the standard library, built to survive crashes and network partitions.'
 date: '2026'

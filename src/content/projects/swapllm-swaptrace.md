@@ -11,7 +11,7 @@ label:
   ink: '#3B2314'
   accent: '#D9622B'
   accent2: '#4F7A93'
-  motif: zigzag
+  art: track-switch
 # DRAFT: Holden to edit
 tagline: 'An LLM router that falls back across Groq, OpenAI and Anthropic, then the tracer I built after finding the router threw away its own retry data.'
 date: '2026'

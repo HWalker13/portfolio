@@ -30,13 +30,14 @@ const projects = defineCollection({
       }, 'tag must be 2–4 words'),
     /** Playful "track length" next to the reel title. Decorative, not a metric. */
     length: z.string().regex(/^\d{1,2}:[0-5]\d$/),
-    /** The project's record label in the reel (ProjectLabel.astro). ink on bg is in `npm run contrast`. */
+    /** The project's record label in the reel (ProjectLabel.astro): ink is the keyline and the name, accent/accent2 the color plate. ink on bg is in `npm run contrast`. */
     label: z.object({
       bg: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
       ink: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
       accent: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
       accent2: z.string().regex(/^#[0-9A-Fa-f]{6}$/),
-      motif: z.enum(['stripes', 'dots', 'bars', 'moon', 'waves', 'checker', 'diamonds', 'zigzag', 'scallops']),
+      /** The signature illustration in the label's top half (drawn in ProjectLabel.astro). */
+      art: z.enum(['heart-bubbles', 'football-chart', 'track-switch', 'key-bolt']),
     }),
     role: z.string().optional(),
     date: z.string().optional(),

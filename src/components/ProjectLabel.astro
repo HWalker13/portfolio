@@ -1,26 +1,30 @@
 ---
 /*
-  A small record for each project in the reel, with an original center label in the same style
-  as the turntable's (RecordLabels.astro): a printed motif band, the title, the "artist" and the
-  side, in a 70s label layout. Colors and motif come from the project's `label` frontmatter, and
-  every ink/background pair is in `npm run contrast`. Decorative (aria-hidden): the section's
-  heading already names the project.
+  A small record for each project in the reel. Its center label carries an original signature
+  illustration in the site's 70s screen-print style: bold flat shapes in 2–3 palette inks, with
+  the color plate printed slightly off-register from the deep keyline plate. The illustration
+  sits in the top half, the spindle hole stays clear in the center, and the project name is
+  printed below on clean label color (ink/background checked by `npm run contrast`).
+
+  Colors and which illustration come from the project's `label` frontmatter. Decorative
+  (aria-hidden): the section's heading already names the project. The record spins while its
+  section is focused or hovered (src/scripts/project-records.ts); this file is static SVG.
 */
 import type { CollectionEntry } from 'astro:content';
-import LabelMotif from './LabelMotif.astro';
 
 interface Props {
   entry: CollectionEntry<'projects'>;
 }
 const { entry } = Astro.props;
-const { title, side, track, label } = entry.data;
+const { title, label } = entry.data;
+const { bg, ink, accent, accent2, art } = label;
 const uid = `pl-${entry.id}`;
-const LR = 76;
+const LR = 84;
 
-// Same fitting rule as the turntable labels: two balanced lines for long titles.
+// ── Name: up to two balanced lines, sized to fit below the spindle ──
 const words = title.split(' ');
 let lines = [title];
-if (title.length > 11 && words.length > 1) {
+if (title.length > 9 && words.length > 1) {
   let bestMax = Infinity;
   for (let i = 1; i < words.length; i++) {
     const pair = [words.slice(0, i).join(' '), words.slice(i).join(' ')];
@@ -29,35 +33,134 @@ if (title.length > 11 && words.length > 1) {
   }
 }
 const longest = Math.max(...lines.map((l) => l.length));
-const titleSize = +Math.min(22, 118 / (longest * 0.58)).toFixed(2);
-const lineHeight = titleSize * 1.04;
-const lineY = lines.map((_, k) => +(-8 - (lines.length - 1 - k) * lineHeight).toFixed(2));
-const grooves = Array.from({ length: 6 }, (_, i) => 80 + i * 3.2);
+const titleSize = +Math.min(30, 122 / (longest * 0.58)).toFixed(2);
+const lineY = lines.length === 1 ? [38] : [29, +(29 + titleSize * 1.0).toFixed(2)];
+
+// ── Misregistration: the color plate lands a touch off the keyline plate ──
+const OFF = 'translate(1.7 1.4)';
+const KEY = { fill: 'none', stroke: ink, 'stroke-width': 2.6, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' } as const;
+
+const f = (n: number) => +n.toFixed(2);
+
+// Lovely: two speech bubbles whose tails meet in one point, so together they outline a heart.
+// Each bubble is a circle plus a tail; the tail's outer edge is the tangent from the heart's tip.
+function bubble(cx: number, cy: number, r: number, tip: [number, number], side: 1 | -1) {
+  const [px, py] = tip;
+  const d = Math.hypot(px - cx, py - cy);
+  const base = Math.atan2(py - cy, px - cx);
+  const off = Math.acos(r / d);
+  // Outer tangent point (away from the middle), and where the tail's inner edge meets the circle
+  const t = base - side * off;
+  const T = [cx + r * Math.cos(t), cy + r * Math.sin(t)];
+  const q = base + side * 0.62;
+  const Q = [cx + r * Math.cos(q), cy + r * Math.sin(q)];
+  // Long way round, over the top. Left bubble goes clockwise (sweep 1), the right one mirrors it.
+  const sweep = side === -1 ? 1 : 0;
+  return `M ${f(T[0])} ${f(T[1])} A ${r} ${r} 0 1 ${sweep} ${f(Q[0])} ${f(Q[1])} L ${px} ${py} Z`;
+}
+const heartL = bubble(-13, -48, 19, [0, -10], -1);
+const heartR = bubble(13, -48, 19, [0, -10], 1);
+// Each bubble's "typing" dots, kept clear of the overlap so both read as speech bubbles
+const dotsL = [-27, -20.5].map((x) => ({ x, y: -50 }));
+const dotsR = [13, 20, 27].map((x) => ({ x, y: -50 }));
+
+// NFL: a football on yard lines; the laces are a tiny rising bar chart.
+const ball = 'M -44 -40 Q 0 -84 44 -40 Q 0 4 -44 -40 Z';
+const bars = [7, 12.5, 18].map((h, k) => ({ x: -11 + k * 11, h }));
+const yardLines = [-48, -24, 0, 24, 48];
+
+// swapLLM + swaptrace: one track switching into three; the dotted trace follows the taken path.
+const trunk = 'M -60 -40 L -26 -40';
+const branches = [
+  'M -26 -40 C -6 -40 12 -62 44 -62',
+  'M -26 -40 L 54 -40',
+  'M -26 -40 C -6 -40 12 -18 54 -18',
+];
+const taken = `${trunk} ${branches[2].replace('M -26 -40', 'L -26 -40')}`;
+
+// Kache: a key with a lightning bolt through it.
+const keyBody =
+  'M -49 -40 a 15 15 0 1 0 30 0 a 15 15 0 1 0 -30 0 Z M -40 -40 a 6 6 0 1 1 12 0 a 6 6 0 1 1 -12 0 Z';
+const keyShaft = 'M -20 -44.5 L 42 -44.5 L 42 -27 L 35 -27 L 35 -35.5 L 30 -35.5 L 30 -29 L 23 -29 L 23 -35.5 L -20 -35.5 Z';
+const bolt = 'M 15 -70 L -3 -41 L 8 -41 L -5 -12 L 23 -48 L 11 -48 L 25 -70 Z';
 ---
 
 <svg class="project-label" viewBox="-100 -100 200 200" aria-hidden="true" focusable="false">
   <circle r="98" fill="#141110"></circle>
   <g fill="none" stroke="#2c2622" stroke-width="0.9">
-    {grooves.map((r) => <circle r={r} />)}
+    {[88, 91.2, 94.4].map((r) => <circle r={r} />)}
   </g>
-  <path d="M -64 -74 A 98 98 0 0 1 -8 -97 L -4 -80 A 80 80 0 0 0 -52 -60 Z" fill="#ffffff" fill-opacity="0.08"></path>
   <clipPath id={uid}>
     <circle r={LR} />
   </clipPath>
-  <circle r={LR} fill={label.bg}></circle>
+  <circle r={LR} fill={bg}></circle>
+
   <g clip-path={`url(#${uid})`}>
-    <LabelMotif motif={label.motif} bg={label.bg} accent={label.accent} accent2={label.accent2} />
+    {
+      art === 'heart-bubbles' && (
+        <>
+          <g transform={OFF}>
+            <path d={heartL} fill={accent} />
+            <path d={heartR} fill={accent2} />
+          </g>
+          <path d={heartL} {...KEY} />
+          {/* The front bubble covers the back one's outline where they overlap */}
+          <path d={heartR} fill={accent2} />
+          <path d={heartR} {...KEY} />
+          {[...dotsL, ...dotsR].map((d) => <circle cx={d.x} cy={d.y} r="2.6" fill={ink} />)}
+        </>
+      )
+    }
+    {
+      art === 'football-chart' && (
+        <>
+          <g transform={OFF}>
+            {yardLines.map((x) => <rect x={x - 1.6} y="-70" width="3.2" height="60" fill={accent2} />)}
+            <path d={ball} fill={accent} />
+            {bars.map((b) => <rect x={b.x - 3.5} y={-32 - b.h} width="7" height={b.h} fill={accent2} />)}
+          </g>
+          <path d={ball} {...KEY} />
+          <line x1="-20" y1="-32" x2="20" y2="-32" {...KEY} />
+          {bars.map((b) => <rect x={b.x - 3.5} y={-32 - b.h} width="7" height={b.h} {...KEY} stroke-width="1.8" />)}
+        </>
+      )
+    }
+    {
+      art === 'track-switch' && (
+        <>
+          {/* Ties: a wide dashed keyline under each track */}
+          {[trunk, ...branches].map((d) => <path d={d} fill="none" stroke={ink} stroke-width="14" stroke-dasharray="3 9" />)}
+          <g transform={OFF}>
+            {[trunk, ...branches].map((d) => <path d={d} fill="none" stroke={accent2} stroke-width="8" stroke-linecap="round" />)}
+          </g>
+          <path d={taken} fill="none" stroke={accent} stroke-width="4.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0.1 8" />
+          <circle cx="54" cy="-18" r="5" fill={accent} stroke={ink} stroke-width="2" />
+        </>
+      )
+    }
+    {
+      art === 'key-bolt' && (
+        <>
+          <g transform={OFF}>
+            <path d={keyBody} fill={accent} fill-rule="evenodd" />
+            <path d={keyShaft} fill={accent} />
+          </g>
+          <path d={keyBody} {...KEY} />
+          <path d={keyShaft} {...KEY} />
+          <g transform={OFF}>
+            <path d={bolt} fill={accent2} />
+          </g>
+          <path d={bolt} {...KEY} />
+        </>
+      )
+    }
   </g>
-  <circle r={LR - 1.5} fill="none" stroke={label.accent} stroke-width="1.5" stroke-opacity="0.85"></circle>
-  <text class="pl-title" fill={label.ink} font-size={titleSize} text-anchor="middle">
+
+  <circle r={LR - 1.5} fill="none" stroke={ink} stroke-width="1.5" stroke-opacity="0.5"></circle>
+  <text class="pl-title" fill={ink} font-size={titleSize} text-anchor="middle">
     {lines.map((line, k) => <tspan x="0" y={lineY[k]}>{line}</tspan>)}
   </text>
-  <text class="pl-artist" y="16" fill={label.ink} font-size="11" text-anchor="middle">Holden Anderson</text>
-  <rect x="-24" y="27" width="48" height="2.5" rx="1.25" fill={label.accent}></rect>
-  <text class="pl-side" y="45" fill={label.ink} font-size="9" text-anchor="middle" letter-spacing="1.6">
-    SIDE {side} · {track}
-  </text>
-  <circle r="3" fill="#1e140d"></circle>
+  <circle r="3.4" fill="#141110"></circle>
 </svg>
 
 <style>
@@ -65,19 +168,10 @@ const grooves = Array.from({ length: 6 }, (_, i) => 80 + i * 3.2);
     display: block;
     width: 100%;
     height: auto;
-    filter: drop-shadow(0 6px 10px rgb(0 0 0 / 0.35));
   }
   .pl-title {
     font-family: var(--font-display);
     font-variation-settings: var(--display-variation);
-    font-weight: 800;
-  }
-  .pl-artist {
-    font-family: var(--font-body);
-    font-weight: 700;
-  }
-  .pl-side {
-    font-family: var(--font-mono);
-    font-weight: 700;
+    font-weight: 900;
   }
 </style>

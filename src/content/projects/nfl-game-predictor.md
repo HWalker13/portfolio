@@ -8,9 +8,9 @@ length: '5:56'
 label:
   bg: '#E0A526'
   ink: '#3B2314'
-  accent: '#3B2314'
-  accent2: '#6B7B3A'
-  motif: checker
+  accent: '#6E4527'
+  accent2: '#FBF4E4'
+  art: football-chart
 # DRAFT: Holden to edit
 tagline: 'Predicts NFL winners. It beats the home-team baseline, loses to Vegas, and the write-up says so.'
 date: '2026'

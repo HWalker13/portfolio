@@ -100,12 +100,17 @@ const STROKES = [
                 </span>
               </h3>
               {subtitle && <p class="subtitle">{subtitle}</p>}
-              {/* The record sits beside the body-text line, never beside the giant title, so long names keep their width */}
+              {/*
+                The record floats beside the body-text line (never beside the giant title, so long names keep
+                their width); the text wraps around its circle and runs full width below it.
+              */}
               <div class="lead">
-                <p class="line">{tagline}</p>
                 <div class="record">
-                  <ProjectLabel entry={entry} />
+                  <div class="spin" data-spin>
+                    <ProjectLabel entry={entry} />
+                  </div>
                 </div>
+                <p class="line">{tagline}</p>
               </div>
 
               <ul class="stats">
@@ -144,7 +149,9 @@ const STROKES = [
 
 <script>
   import { startReel } from '../scripts/reel';
+  import { startProjectRecords } from '../scripts/project-records';
   startReel();
+  startProjectRecords();
 </script>
 
 <style>
@@ -311,15 +318,21 @@ const STROKES = [
   }
 
   .lead {
+    display: flow-root;
     margin-top: var(--space-3);
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: var(--space-4);
   }
   .record {
-    width: clamp(4.5rem, 3rem + 4vw, 7rem);
-    transform: rotate(-12deg);
+    float: right;
+    width: clamp(6rem, 4.5rem + 3vw, 8rem);
+    margin: 0 0 var(--space-2) var(--space-3);
+    shape-outside: circle(50%);
+    shape-margin: 0.5rem;
+    border-radius: 50%;
+    box-shadow: 0 6px 14px rgb(0 0 0 / 0.35);
+  }
+  /* Spun by src/scripts/project-records.ts (transform only); at rest the label reads upright */
+  .spin {
+    border-radius: 50%;
   }
   .length {
     margin-left: 0.4em;

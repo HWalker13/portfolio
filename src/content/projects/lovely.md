@@ -11,7 +11,7 @@ label:
   ink: '#1E140D'
   accent: '#FBF4E4'
   accent2: '#E0A526'
-  motif: scallops
+  art: heart-bubbles
 # DRAFT: Holden to edit
 tagline: 'A relationship-growth app, live on the App Store. I co-founded it and built the AI gateway, the security layer and subscription billing.'
 role: Co-Founder & Engineer, Lovely LLC
