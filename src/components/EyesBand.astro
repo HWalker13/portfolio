@@ -9,22 +9,16 @@
   (phone, mid, desktop), scaled so the same number of rows shows at every width; positions are
   percentages of a strip that keeps its aspect ratio, and the pattern bleeds off every edge.
 
-  Per eye, bottom to top: lid color / petals, the white, the iris layer (`.look`, clipped to the
-  eye opening; src/scripts/eyes.ts slides it toward the cursor, under the lids), the lid's shadow
-  on the eyeball, the moving eyelid (in the design's lid color with an ink lash line; it slides
-  down for blinks and sleepy drooping), then the ink.
+  Per eye, bottom to top: lid color / petals (and the wave crests, `.calm`, which eyes.ts flattens
+  as the eye falls asleep), the white (the largest opening the lids ever leave),
+  then, clipped to it: the iris layer (`.look`; src/scripts/eyes.ts slides it toward the cursor),
+  the corner hatching, the lower lid (`.cover`) and the upper eyelid (`.lid`, with its shadow and
+  the closed-lid painting); then the static ink (crease), the ink that rides on the upper lid
+  (`.upper`: liner, lashes) and on the lower lid (`.lower`, with any lashes that hang from the
+  closed lash line, `.drop`). eyes.ts moves the lids with the gaze and slides the eyelid down for
+  droops, blinks and sleep, transform only.
 */
-import { ART, DESIGNS, INK, IRISES, IRIS_ART, LID_EDGE, LID_PATH, LID_REST, LID_TRAVEL, OPENING_PATH, PATTERNS, SHADE, VB, type Design } from '../scripts/eye-art';
-
-/** The moving eyelid takes the design's lid color (spikes has no shadow: the band shows through). */
-const LID_FILL: Record<Design, string> = {
-  cobalt: INK.cobalt,
-  waves: INK.cobalt,
-  sage: INK.sage,
-  yellow: INK.yellow,
-  petals: INK.yellow,
-  spikes: 'var(--eyes-bg)',
-};
+import { ART, BELOW_PATH, DESIGNS, IRISES, IRIS_ART, LID_GEOM, OPEN_MAX_PATH, PATTERNS, SHADE, VB } from '../scripts/eye-art';
 
 const layouts = PATTERNS.map(({ L, placed }) => ({
   key: L.key,
@@ -34,6 +28,8 @@ const layouts = PATTERNS.map(({ L, placed }) => ({
     return {
       design: p.design,
       iris: p.iris,
+      col: p.col,
+      row: p.row,
       style: [
         `left:${(((p.cx - p.w / 2) / L.W) * 100).toFixed(2)}%`,
         `top:${(((p.cy - h / 2) / L.H) * 100).toFixed(2)}%`,
@@ -44,24 +40,22 @@ const layouts = PATTERNS.map(({ L, placed }) => ({
   }),
 }));
 const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
+const box = { x: VB.x, y: VB.y, width: VB.w, height: VB.h };
+const LAYERS = ['behind', 'calm', 'front', 'upper', 'lower', 'lid', 'cover', 'drop'] as const;
+const lid = JSON.stringify(Object.fromEntries(Object.entries(LID_GEOM).map(([k, v]) => [k, +v.toFixed(4)])));
 ---
 
-<div class="eyes-band" aria-hidden="true" data-eyes data-lid-rest={LID_REST} data-lid-travel={LID_TRAVEL}>
+<div class="eyes-band" aria-hidden="true" data-eyes data-lid={lid}>
   <span class="grain"></span>
 
   <!-- The sprite: each design's layers, drawn once -->
   <svg class="sprite" width="0" height="0" focusable="false">
     <defs>
-      <clipPath id="eye-opening"><path d={OPENING_PATH}></path></clipPath>
-      {
-        DESIGNS.map((d) => (
-          <>
-            <symbol id={`eye-${d}-behind`} viewBox={vb} overflow="visible" set:html={ART[d].behind} />
-            <symbol id={`eye-${d}-front`} viewBox={vb} overflow="visible" set:html={ART[d].front} />
-          </>
-        ))
-      }
+      <clipPath id="eye-opening"><path d={OPEN_MAX_PATH}></path></clipPath>
+      <clipPath id="eye-below"><path d={BELOW_PATH}></path></clipPath>
+      {DESIGNS.flatMap((d) => LAYERS.filter((l) => ART[d][l]).map((l) => <symbol id={`eye-${d}-${l}`} viewBox={vb} overflow="visible" set:html={ART[d][l]} />))}
       {IRISES.map((c) => <symbol id={`iris-${c}`} viewBox={vb} overflow="visible" set:html={IRIS_ART[c]} />)}
+      <symbol id="eye-white" viewBox={vb} overflow="visible"><path d={OPEN_MAX_PATH} fill="#FFFDF6"></path></symbol>
       <symbol id="eye-shade" viewBox={vb} overflow="visible" set:html={SHADE} />
     </defs>
   </svg>
@@ -70,20 +64,26 @@ const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
     layouts.map((L) => (
       <div class:list={['eyes', `eyes--${L.key}`]} style={`aspect-ratio:${L.aspect}`}>
         {L.eyes.map((e) => (
-          <svg class="eye" viewBox={vb} style={e.style} data-eye={e.design} data-iris={e.iris}>
-            <use href={`#eye-${e.design}-behind`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
-            <path d={OPENING_PATH} fill={INK.white} />
+          <svg class="eye" viewBox={vb} style={e.style} data-col={e.col} data-row={e.row}>
+            {ART[e.design].behind && <use href={`#eye-${e.design}-behind`} {...box} />}
+            {ART[e.design].calm && <use class="calm" href={`#eye-${e.design}-calm`} {...box} />}
+            <use href="#eye-white" {...box} />
             <g clip-path="url(#eye-opening)">
-              <g class="look">
-                <use href={`#iris-${e.iris}`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
-              </g>
-              <use href="#eye-shade" x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
-              <g class="lid">
-                <path d={LID_PATH} style={`fill:${LID_FILL[e.design]}`} />
-                <path d={LID_EDGE} fill="none" stroke={INK.ink} stroke-width="3" stroke-linejoin="round" />
-              </g>
+              <use class="look" href={`#iris-${e.iris}`} {...box} />
+              <use href="#eye-shade" {...box} />
+              <use class="cover" href={`#eye-${e.design}-cover`} {...box} />
+              <use class="lid" href={`#eye-${e.design}-lid`} {...box} />
             </g>
-            <use href={`#eye-${e.design}-front`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
+            {ART[e.design].front && <use href={`#eye-${e.design}-front`} {...box} />}
+            <use class="upper" href={`#eye-${e.design}-upper`} {...box} />
+            <g class="lower">
+              <use href={`#eye-${e.design}-lower`} {...box} />
+              {ART[e.design].drop && (
+                <g clip-path="url(#eye-below)">
+                  <use class="drop" href={`#eye-${e.design}-drop`} {...box} />
+                </g>
+              )}
+            </g>
           </svg>
         ))}
       </div>
@@ -155,14 +155,19 @@ const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
     overflow: visible;
     transform-origin: 50% 50%;
   }
-  .look {
-    will-change: transform;
+  /* eyes.ts moves these with transform only; the matrices it writes are in the eye's own units */
+  .look,
+  .lid,
+  .cover,
+  .upper,
+  .lower,
+  .drop,
+  .calm {
+    transform-box: view-box;
+    transform-origin: 0 0;
   }
-  /*
-    The eyelid rests just above the opening (out of sight, the clip hides it). src/scripts/eyes.ts
-    slides it down with translate for blinks and drooping; keep this in sync with LID_REST.
-  */
-  .lid {
-    transform: translate(0, -5px);
+  /* The hanging lashes start tucked up out of sight behind the lower lid line (eyes.ts: DROP_HIDE) */
+  .drop {
+    transform: translate(0, -44px);
   }
 </style>
