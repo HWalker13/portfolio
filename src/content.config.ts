@@ -64,8 +64,16 @@ const projects = defineCollection({
       )
       .min(1),
     /**
+      Where the project's reel card goes when clicked (new tab): the one place it's live.
+      `name` completes "Visit ___ (opens in a new tab)", the card's accessible name.
+    */
+    link: z.object({
+      url: z.url(),
+      name: z.string().min(3),
+    }),
+    /**
       Demo video for the reel (Stage 3). Paths under public/. Until a project has one, the reel
-      shows a static card: the name, where it's live, and a button to it. The poster frame is required, so a
+      shows a static card: the name and where it's live (the whole card links there). The poster frame is required, so a
       video can never show up as a blank box.
     */
     /** A full results page beyond the liner notes (NFL only). Linked from the reel card. */

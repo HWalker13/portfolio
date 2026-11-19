@@ -4,12 +4,14 @@
     wheel  - on the curved wheel (desktop, motion OK). Transforms are set by src/scripts/reel.ts.
     inline - flat, inside the project's own section (phones, and everyone with reduced motion).
 
-  With a video: muted, looped, playsinline, preload="none" (nothing downloads until it plays).
-  Its poster frame is a lazy-loaded <img> under the video, and there's a real Play/Pause button.
-  Without one: a static card with the project name, where it's live, and a button to it
-  (the App Store for an app, else PyPI or GitHub), taken from the project's proof links.
+  The whole card is one link to where the project lives (frontmatter `link`), in a new tab. The
+  video inside is decorative: muted, looped, playsinline, preload="none", never focusable, and
+  played or paused only by src/scripts/reel.ts (the focused / visible card plays; "Pause motion"
+  and reduced motion stop it and leave the poster). Its poster frame is a lazy-loaded <img>.
+  Without a video: a static card with the project name and where it's live.
 
-  Layers, bottom to top: poster (image or static card), video, fringe, button.
+  Layers, bottom to top, all inside .face (which lifts on hover, so the wheel's own transform on
+  the card is never touched): poster (image or static card), video, fringe, the "↗ Visit" tag.
   The chromatic-aberration fringe is a static red/cyan edge shadow whose opacity the wheel
   sets per frame (opacity only, so it's free on the compositor). It's never applied to the
   live video, only to the card edge around the poster layer, and only off-focus.
@@ -22,7 +24,7 @@ interface Props {
   variant: 'wheel' | 'inline';
 }
 const { entry, index, variant } = Astro.props;
-const { title, video, proof } = entry.data;
+const { title, video, proof, link } = entry.data;
 
 // Static-card inks: each a field deep brown text passes on (≥4.9:1), plus two accent stripes.
 const LOOKS = [
@@ -36,69 +38,97 @@ const num = String(index + 1).padStart(2, '0');
 
 // Static card: where the project lives, preferring the App Store, then PyPI, then GitHub.
 const WHERE = {
-  appstore: { status: 'Live on the App Store', button: 'View on the App Store' },
-  pypi: { status: 'Published on PyPI', button: 'View on PyPI' },
-  github: { status: 'Open source on GitHub', button: 'View on GitHub' },
+  appstore: { status: 'Live on the App Store' },
+  pypi: { status: 'Published on PyPI' },
+  github: { status: 'Open source on GitHub' },
 } as const;
 const home = (['appstore', 'pypi', 'github'] as const).map((k) => proof.find((p) => p.kind === k)).find(Boolean)!;
 const where = WHERE[home.kind];
 ---
 
-<figure
+<a
   class:list={['vcard', `vcard--${variant}`, video && `vcard--${video.frame}`]}
+  href={link.url}
+  target="_blank"
+  rel="noopener"
   data-card={index}
   data-variant={variant}
   style={`--sc-bg:${look.bg};--sc-a:${look.a};--sc-b:${look.b}`}
 >
-  {
-    video ? (
-      <div class="poster-layer" aria-hidden="true">
-        <img src={video.poster} alt="" loading="lazy" decoding="async" />
-      </div>
-    ) : (
-      <div class="sc">
-        <span class="sc-stripes" aria-hidden="true" />
-        <span class="sc-num" aria-hidden="true">{num}</span>
-        <p class="sc-name">{title}</p>
-        <p class="sc-status">{where.status}</p>
-        <a class="sc-button" href={home.url}>
-          {where.button}
-          <span class="visually-hidden"> ({title})</span>
-          <span class="sc-arrow" aria-hidden="true">↗</span>
-        </a>
-      </div>
-    )
-  }
-  {
-    video && (
-      <>
-        {/* No poster attribute: browsers fetch a video poster eagerly. The lazy <img> above shows it. */}
-        <video muted loop playsinline preload="none" aria-label={`Demo of ${title}`}>
-          {video.webm && <source src={video.webm} type="video/webm" />}
-          <source src={video.mp4} type="video/mp4" />
-        </video>
-        <button class="vplay" type="button" data-play aria-pressed="false">
-          <span class="vplay-icon" aria-hidden="true" />
-          <span class="vplay-text">Play</span>
-          <span class="visually-hidden"> {title} demo</span>
-        </button>
-      </>
-    )
-  }
-  <span class="fringe" aria-hidden="true"></span>
-</figure>
+  {/* The name leads with the word the tag shows, so "click Visit" works for voice control */}
+  <span class="visually-hidden">Visit {link.name} (opens in a new tab)</span>
+  <span class="face" aria-hidden="true">
+    {
+      video ? (
+        <>
+          <span class="poster-layer">
+            <img src={video.poster} alt="" loading="lazy" decoding="async" />
+          </span>
+          {/* No poster attribute: browsers fetch a video poster eagerly. The lazy <img> above shows it. */}
+          <video muted loop playsinline preload="none" tabindex="-1">
+            {video.webm && <source src={video.webm} type="video/webm" />}
+            <source src={video.mp4} type="video/mp4" />
+          </video>
+        </>
+      ) : (
+        <span class="sc">
+          <span class="sc-stripes" />
+          <span class="sc-num">{num}</span>
+          <span class="sc-name">{title}</span>
+          <span class="sc-status">{where.status}</span>
+        </span>
+      )
+    }
+    <span class="fringe"></span>
+    <span class="visit">↗ Visit</span>
+  </span>
+</a>
 
 <style>
   .vcard {
     position: relative;
+    display: block;
     margin: 0;
     aspect-ratio: 16 / 10;
     border-radius: 18px;
+    color: var(--deep-brown);
+    text-decoration: none;
+    cursor: pointer;
+  }
+  .vcard:focus-visible {
+    outline: 3px solid var(--focus);
+    outline-offset: 5px;
+  }
+  .face {
+    position: absolute;
+    inset: 0;
+    display: block;
+    border-radius: inherit;
     overflow: hidden;
     background: var(--sc-bg);
     box-shadow:
       0 0 0 3px var(--deep-brown),
       0 26px 50px -22px rgb(0 0 0 / 0.7);
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
+  }
+  /* Hover cue: a slight lift. Kept off the wheel's own transform, which lives on .vcard. */
+  .vcard:hover .face,
+  .vcard:focus-visible .face {
+    transform: translateY(-5px);
+    box-shadow:
+      0 0 0 3px var(--deep-brown),
+      0 34px 56px -22px rgb(0 0 0 / 0.75);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .face {
+      transition: none;
+    }
+    .vcard:hover .face,
+    .vcard:focus-visible .face {
+      transform: none;
+    }
   }
   .poster-layer,
   .poster-layer img,
@@ -117,6 +147,38 @@ const where = WHERE[home.kind];
   .vcard--phone .poster-layer img {
     object-fit: contain;
     padding: 6% 0;
+  }
+
+  /* ── "↗ Visit": top right (the recordings keep that corner quiet), shown on hover / focus ── */
+  .visit {
+    position: absolute;
+    right: 0.75rem;
+    top: 0.75rem;
+    padding: 0.3em 0.8em;
+    border-radius: 999px;
+    background: var(--paper);
+    color: var(--chocolate);
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    font-weight: 700;
+    box-shadow: 0 3px 0 var(--deep-brown);
+    opacity: 0;
+    transform: translateY(-3px);
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease;
+  }
+  .vcard:hover .visit,
+  .vcard:focus-visible .visit {
+    opacity: 1;
+    transform: none;
+  }
+  /* Touch screens never hover: keep the tag showing so the card reads as a link */
+  @media (hover: none) {
+    .visit {
+      opacity: 1;
+      transform: none;
+    }
   }
 
   /* ── Static card (no video) ─────────────────────────────────────────── */
@@ -166,30 +228,6 @@ const where = WHERE[home.kind];
     font-weight: 700;
     font-size: 1rem;
   }
-  .sc-button {
-    position: relative;
-    margin-top: 0.4rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45em;
-    min-height: 44px;
-    padding: 0.4em 1em;
-    border-radius: 999px;
-    background: var(--paper);
-    color: var(--chocolate);
-    font-weight: 700;
-    text-decoration: none;
-    box-shadow: 0 3px 0 var(--deep-brown);
-  }
-  .sc-button:hover {
-    background: var(--mustard);
-    color: var(--chocolate);
-  }
-  .sc-button:focus-visible {
-    outline: 3px solid var(--deep-brown);
-    outline-offset: 3px;
-  }
-
   /* ── Fringe (off-focus only; the wheel drives its opacity) ───────────── */
   .fringe {
     position: absolute;
@@ -202,43 +240,5 @@ const where = WHERE[home.kind];
       inset -5px 0 0 rgb(0 210 255 / 0.5),
       inset 0 3px 0 rgb(255 40 70 / 0.3),
       inset 0 -3px 0 rgb(0 210 255 / 0.3);
-  }
-
-  /* ── Play / pause ────────────────────────────────────────────────────── */
-  /* Top right: the demos keep that corner empty, and their caption strip runs along the bottom */
-  .vplay {
-    position: absolute;
-    right: 0.75rem;
-    top: 0.75rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45em;
-    min-height: 44px;
-    padding: 0.4em 0.95em;
-    border: 0;
-    border-radius: 999px;
-    background: var(--paper);
-    color: var(--chocolate);
-    font-family: var(--font-mono);
-    font-size: 0.8rem;
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: 0 3px 0 var(--deep-brown);
-  }
-  .vplay:focus-visible {
-    outline: 3px solid var(--mustard);
-    outline-offset: 3px;
-  }
-  .vplay-icon {
-    width: 0;
-    height: 0;
-    border-block: 0.4em solid transparent;
-    border-left: 0.65em solid currentColor;
-  }
-  .vplay[aria-pressed='true'] .vplay-icon {
-    width: 0.6em;
-    height: 0.8em;
-    border: 0;
-    border-inline: 0.2em solid currentColor;
   }
 </style>

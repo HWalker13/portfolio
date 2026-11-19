@@ -9,7 +9,10 @@
   is on screen.
 
   Playback: only the focused card plays (wheel), or the card that's in view (inline, phones).
-  Reduced motion: no wheel (CSS hides it), no autoplay, Play buttons only.
+  The cards are links with decorative videos and no controls of their own, so two site-wide
+  switches decide whether anything plays: "Pause motion" (<html data-motion="paused">, announced
+  with 'motionchange') pauses every video and resuming plays the right ones again; reduced
+  motion never autoplays, so each card shows its poster frame.
 */
 
 // ── Pure geometry (unit-tested in reel.test.ts) ───────────────────────────
@@ -65,6 +68,11 @@ export function cardPose(d: number, radius: number): CardPose {
   };
 }
 
+/** Whether a card's video should be playing: it's the one in view, and nothing says hold still. */
+export function shouldPlay(wanted: boolean, motion: { paused: boolean; reduced: boolean }): boolean {
+  return wanted && !motion.paused && !motion.reduced;
+}
+
 // ── DOM ───────────────────────────────────────────────────────────────────
 export function startReel() {
   const reel = document.querySelector<HTMLElement>('[data-reel]');
@@ -76,8 +84,11 @@ export function startReel() {
   const reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
   const wheelMode = window.matchMedia('(min-width: 768px) and (prefers-reduced-motion: no-preference)');
 
+  const root = document.documentElement;
+  const motion = () => ({ paused: root.dataset.motion === 'paused', reduced: reduce.matches });
+  const play = (card: HTMLElement, wanted: boolean) => setPlaying(card, shouldPlay(wanted, motion()));
+
   setupCounter(reel, reduce);
-  setupPlayButtons(reel);
 
   // ── Wheel ──
   let centers: number[] = [];
@@ -131,7 +142,7 @@ export function startReel() {
       wheelCards.forEach((card, i) => {
         // Only the focused card can be reached by keyboard or pointer
         card.inert = i !== focused;
-        setPlaying(card, i === focused && !reduce.matches);
+        play(card, i === focused);
       });
     }
     if (tilting) raf = requestAnimationFrame(render);
@@ -174,13 +185,16 @@ export function startReel() {
     });
   }
 
-  // ── Inline cards (phones): autoplay muted while mostly visible, unless reduced motion ──
+  // ── Inline cards (phones): play muted while mostly visible ──
+  const inView = new Set<HTMLElement>();
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver(
       (entries) => {
         for (const e of entries) {
-          if (wheelMode.matches) continue;
-          setPlaying(e.target as HTMLElement, e.intersectionRatio >= 0.6 && !reduce.matches);
+          const card = e.target as HTMLElement;
+          if (e.intersectionRatio >= 0.6) inView.add(card);
+          else inView.delete(card);
+          if (!wheelMode.matches) play(card, inView.has(card));
         }
       },
       { threshold: [0, 0.6] },
@@ -188,54 +202,23 @@ export function startReel() {
     inlineCards.forEach((c) => io.observe(c));
   }
 
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') [...wheelCards, ...inlineCards].forEach((c) => setPlaying(c, false));
-    else {
-      focused = -1;
-      kick();
-    }
-  });
-}
+  /** Re-decide every video: after Pause motion flips, or when the tab comes back. */
+  const replay = () => {
+    if (!wheelMode.matches) inlineCards.forEach((c) => play(c, inView.has(c)));
+    focused = -1; // the wheel re-applies its focused card on the next frame
+    kick();
+  };
+  const stopAll = () => [...wheelCards, ...inlineCards].forEach((c) => setPlaying(c, false));
 
-/** Cards the visitor paused stay paused until they press Play again. */
-const userPaused = new WeakSet<HTMLElement>();
+  document.addEventListener('motionchange', () => (motion().paused ? stopAll() : replay()));
+  document.addEventListener('visibilitychange', () => (document.visibilityState === 'hidden' ? stopAll() : replay()));
+}
 
 function setPlaying(card: HTMLElement, play: boolean) {
   const video = card.querySelector('video');
   if (!video) return;
-  if (play && !userPaused.has(card)) {
-    video.play().then(
-      () => syncButton(card, true),
-      () => syncButton(card, false), // autoplay blocked: leave the Play button showing
-    );
-  } else {
-    video.pause();
-    syncButton(card, false);
-  }
-}
-
-function syncButton(card: HTMLElement, playing: boolean) {
-  const btn = card.querySelector<HTMLButtonElement>('[data-play]');
-  if (!btn) return;
-  btn.setAttribute('aria-pressed', String(playing));
-  const text = btn.querySelector('.vplay-text');
-  if (text) text.textContent = playing ? 'Pause' : 'Play';
-}
-
-function setupPlayButtons(reel: HTMLElement) {
-  reel.addEventListener('click', (e) => {
-    const btn = (e.target as Element).closest<HTMLButtonElement>('[data-play]');
-    if (!btn) return;
-    const card = btn.closest<HTMLElement>('.vcard')!;
-    const video = card.querySelector('video')!;
-    if (video.paused) {
-      userPaused.delete(card);
-      setPlaying(card, true);
-    } else {
-      userPaused.add(card);
-      setPlaying(card, false);
-    }
-  });
+  if (play) video.play().catch(() => {}); // autoplay blocked: the poster frame stays, the link still works
+  else video.pause();
 }
 
 /** Up/down buttons: scroll to the neighbor section and move focus to its heading. */

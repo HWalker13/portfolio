@@ -104,8 +104,7 @@ for (const [file, tok] of [['flowers.svg', light], ['flowers-dark.svg', dark]]) 
 // Theme-independent surfaces: static demo cards, board items, poster inks
 const T = (n) => toRgb(resolve(light, n));
 for (const bg of ['--burnt-orange', '--mustard', '--powder', '--cream']) check(`static demo card: deep brown on ${bg}`, T('--deep-brown'), T(bg), BODY);
-check('video Play button and static card button: chocolate on paper', T('--chocolate'), T('--paper'), BODY);
-check('static card button hover: chocolate on mustard', T('--chocolate'), T('--mustard'), BODY);
+check('card "↗ Visit" tag: chocolate on paper', T('--chocolate'), T('--paper'), BODY);
 check('board item ink on paper (note, index card, polaroid, resume)', T('--item-ink'), T('--paper'), BODY);
 check('board item ink over a note rule line (powder)', T('--item-ink'), T('--note-rule'), BODY);
 check('ticket stub ink on --ticket-bg', T('--item-ink'), T('--ticket-bg'), BODY);

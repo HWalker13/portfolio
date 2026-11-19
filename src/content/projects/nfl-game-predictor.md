@@ -27,6 +27,10 @@ headlineStats:
     value: '{{nfl.heldOut.bets.lossCents}} cents'
     context: 'per dollar bet. The live 2026 test that counts, closing-line value, shows {{nfl.live.clv.verdictLower}} {{nfl.live.clv.when}}. I claim none.'
 results: /projects/nfl-game-predictor/results/
+# The reel card opens this in a new tab
+link:
+  url: https://holden-nfl-picks.vercel.app/
+  name: 'the NFL Game Predictor website'
 proof:
   - kind: github
     label: GitHub

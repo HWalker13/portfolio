@@ -24,6 +24,10 @@ headlineStats:
     context: 'ops/sec at sub-2ms p50 latency with 20 concurrent clients'
   - value: '0'
     context: 'writes lost across 50 buffered commands after a simulated partition'
+# The reel card opens this in a new tab
+link:
+  url: https://github.com/HWalker13/kache
+  name: 'Kache on GitHub'
 proof:
   - kind: github
     label: GitHub

@@ -27,6 +27,10 @@ headlineStats:
     context: 'packages published to PyPI'
   - value: '7.75µs'
     context: 'tracing overhead (<0.01% of LLM latency)'
+# The reel card opens this in a new tab
+link:
+  url: https://pypi.org/project/swapllm
+  name: 'swapLLM on PyPI'
 proof:
   - kind: pypi
     label: PyPI swapllm

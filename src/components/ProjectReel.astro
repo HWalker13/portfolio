@@ -424,8 +424,15 @@ const STROKES = [
     width: min(100%, 34rem);
     aspect-ratio: 16 / 10;
     transform-style: preserve-3d;
+    /*
+      The stage is a plane at z = 0 in the same 3D context as the cards. When the focused card tilts
+      toward the pointer, half of it dips behind that plane, and the stage would swallow clicks
+      there. Only the cards take pointer events (the neighbors are inert anyway).
+    */
+    pointer-events: none;
   }
   .wheel-stage > :global(.vcard) {
+    pointer-events: auto;
     position: absolute;
     inset: 0;
     backface-visibility: hidden;

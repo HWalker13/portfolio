@@ -8,3 +8,5 @@ dist/
 .env.*
 # Intermediate demo recordings (scripts/make-demos.mjs); the finished videos are in public/videos
 scripts/demos/out/
+# Source screen recordings for scripts/make-recordings.mjs (large; the finished videos are in public/videos)
+scripts/recordings/

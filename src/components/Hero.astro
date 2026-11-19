@@ -44,7 +44,7 @@ import { site } from '../data/site';
     </div>
   </div>
 
-  <!-- Quiet "pause motion" toggle in the bottom corner: stops the marquee and the eyes band -->
+  <!-- Quiet "pause motion" toggle in the bottom corner: stops the marquee, the eyes band, the reel records and the project videos -->
   <div class="container motion-row">
     <button type="button" class="motion-toggle" aria-pressed="false" data-motion-toggle>
       <span class="motion-icon" aria-hidden="true"></span>
@@ -55,7 +55,7 @@ import { site } from '../data/site';
 
 <script>
   // "Pause motion": one site-wide switch on <html data-motion>, remembered in localStorage.
-  // The marquee pauses through CSS; the eyes listen for the 'motionchange' event.
+  // The marquee pauses through CSS; the eyes, the reel records and the project videos listen for the 'motionchange' event.
   const toggle = document.querySelector<HTMLButtonElement>('[data-motion-toggle]');
   if (toggle) {
     const root = document.documentElement;

@@ -76,21 +76,6 @@ const DEMOS = {
       },
     ],
   },
-  nfl: {
-    title: 'NFL Game Predictor',
-    subtitle: 'The 2026 live record, replayed',
-    moments: [
-      { line: 0, caption: 'A copy of the repo, scratch mode: the official record, nothing re-predicted' },
-      { line: 4, caption: 'Week 7 picks as logged before kickoff, next to the final scores' },
-      { line: 11, caption: 'Model 0.595 vs. home-team baseline 0.473. The Vegas favorite does better: 0.608' },
-      {
-        line: 17,
-        caption: 'ROI is positive, but mean CLV is negative (p = 0.70): no edge claimed',
-        strong: true,
-        box: { fromLine: 15, toLine: 17, x: 22, w: 1236 },
-      },
-    ],
-  },
 };
 
 /** Run a tool; on failure, report its own error text instead of raw buffers. */

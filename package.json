@@ -13,6 +13,7 @@
     "icons": "node scripts/make-icons.mjs",
     "og": "node scripts/make-og.mjs",
     "demos": "node scripts/make-demos.mjs",
+    "recordings": "node scripts/make-recordings.mjs",
     "sync:nfl": "node scripts/sync-nfl-data.ts"
   },
   "type": "module",

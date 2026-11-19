@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cardPose, reelIndex, STEP_DEG } from './reel';
+import { cardPose, reelIndex, shouldPlay, STEP_DEG } from './reel';
 
 describe('reelIndex', () => {
   const centers = [500, 1500, 2500, 3500];
@@ -48,5 +48,20 @@ describe('cardPose', () => {
   it('hides cards far from the focus', () => {
     expect(cardPose(3, 400).hidden).toBe(true);
     expect(cardPose(2, 400).hidden).toBe(false);
+  });
+});
+
+describe('shouldPlay', () => {
+  const free = { paused: false, reduced: false };
+  it('plays the card in view when nothing says hold still', () => {
+    expect(shouldPlay(true, free)).toBe(true);
+    expect(shouldPlay(false, free)).toBe(false);
+  });
+  it('"Pause motion" stops every video, in view or not', () => {
+    expect(shouldPlay(true, { paused: true, reduced: false })).toBe(false);
+  });
+  it('reduced motion never autoplays: the card keeps its poster frame', () => {
+    expect(shouldPlay(true, { paused: false, reduced: true })).toBe(false);
+    expect(shouldPlay(true, { paused: true, reduced: true })).toBe(false);
   });
 });

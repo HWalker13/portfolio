@@ -27,6 +27,10 @@ headlineStats:
     context: 'beta users on stable builds before the production App Store release'
   - value: 'First paying subscribers'
     context: 'after launch, via RevenueCat subscriptions and free trials'
+# The reel card opens this in a new tab
+link:
+  url: https://apps.apple.com/us/app/lovely-relationship-growth/id6758863491
+  name: 'Lovely on the App Store'
 proof:
   - kind: appstore
     label: App Store
