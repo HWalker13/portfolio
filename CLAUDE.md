@@ -26,7 +26,7 @@ Personality is the differentiator, but never at the cost of audience #1. If an e
 - **Keep the tree clean.** When a feature or asset is replaced, delete the old one, its generator, its npm script, its tokens, its contrast checks and its CLAUDE.md text in the same change. No "old", "v1", "backup" or commented-out copies; git history is the backup.
 - **NFL results data** (`npm run sync:nfl`, `scripts/sync-nfl-data.ts` + `src/data/nfl/sync.ts`): copies `exports/site_data.json` from the NFL repo (path: `$NFL_SITE_DATA`, default `/Users/holdenanderson/Personal Projects/NFL-GAME-PREDICTOR/exports/site_data.json`) to `src/data/nfl/site_data.json`, which is checked in because Vercel can't see the other repo. It fails if the file is missing, isn't schema 1.x, fails the zod schema (`src/data/nfl/schema.ts`) or was exported from uncommitted code (`--allow-dirty` overrides). The build parses it again, so a mismatch fails the build. It's imported only at build time; no client script may import it.
 - **Project content lives in an Astro content collection** (`src/content/projects/*.md`) with typed frontmatter (zod schema), so adding a project later means adding one Markdown file.
-- **Deploy target: Vercel**, static output. Don't deploy anything yourself; I'll connect the repo.
+- **Deploy target: Vercel**, static output. Every push to `main` deploys automatically to https://holden-anderson.vercel.app, so a push to `main` is a production deploy: push only when I ask. Don't deploy any other way yourself.
 - No analytics, no cookies, no backend.
 
 ## Design direction: 70s soul / funk
