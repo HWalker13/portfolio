@@ -1,19 +1,30 @@
 ---
 /*
   Eyes band: a half-drop repeat of hand-inked 1960s pop-art eyes on a red-orange strip, like a
-  printed textile. Five original designs, cycled. Decorative: aria-hidden.
+  printed textile. Six original designs, cycled, with six iris colors. Decorative: aria-hidden.
 
   The art and the layout live in src/scripts/eye-art.ts (plain data, tested in eyes.test.ts).
-  Each design is drawn ONCE, as symbols in a hidden sprite; every eye on the strip is a few
-  <use> references to them, so the pattern costs little DOM. Each breakpoint has its own grid
+  Each design and each iris color is drawn ONCE, as symbols in a hidden sprite; every eye on the
+  strip is a few <use> references to them, so the pattern costs little DOM. Each breakpoint has its own grid
   (phone, mid, desktop), scaled so the same number of rows shows at every width; positions are
   percentages of a strip that keeps its aspect ratio, and the pattern bleeds off every edge.
 
   Per eye, bottom to top: lid color / petals, the white, the iris layer (`.look`, clipped to the
   eye opening; src/scripts/eyes.ts slides it toward the cursor, under the lids), the lid's shadow
-  on the eyeball, the blink lid, then the ink.
+  on the eyeball, the moving eyelid (in the design's lid color with an ink lash line; it slides
+  down for blinks and sleepy drooping), then the ink.
 */
-import { ART, DESIGNS, EX, EY, INK, OPENING_PATH, PATTERNS, SHADE, VB } from '../scripts/eye-art';
+import { ART, DESIGNS, INK, IRISES, IRIS_ART, LID_EDGE, LID_PATH, LID_REST, LID_TRAVEL, OPENING_PATH, PATTERNS, SHADE, VB, type Design } from '../scripts/eye-art';
+
+/** The moving eyelid takes the design's lid color (spikes has no shadow: the band shows through). */
+const LID_FILL: Record<Design, string> = {
+  cobalt: INK.cobalt,
+  waves: INK.cobalt,
+  sage: INK.sage,
+  yellow: INK.yellow,
+  petals: INK.yellow,
+  spikes: 'var(--eyes-bg)',
+};
 
 const layouts = PATTERNS.map(({ L, placed }) => ({
   key: L.key,
@@ -22,6 +33,7 @@ const layouts = PATTERNS.map(({ L, placed }) => ({
     const h = p.w * (VB.h / VB.w);
     return {
       design: p.design,
+      iris: p.iris,
       style: [
         `left:${(((p.cx - p.w / 2) / L.W) * 100).toFixed(2)}%`,
         `top:${(((p.cy - h / 2) / L.H) * 100).toFixed(2)}%`,
@@ -34,7 +46,7 @@ const layouts = PATTERNS.map(({ L, placed }) => ({
 const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
 ---
 
-<div class="eyes-band" aria-hidden="true" data-eyes>
+<div class="eyes-band" aria-hidden="true" data-eyes data-lid-rest={LID_REST} data-lid-travel={LID_TRAVEL}>
   <span class="grain"></span>
 
   <!-- The sprite: each design's layers, drawn once -->
@@ -45,11 +57,11 @@ const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
         DESIGNS.map((d) => (
           <>
             <symbol id={`eye-${d}-behind`} viewBox={vb} overflow="visible" set:html={ART[d].behind} />
-            <symbol id={`eye-${d}-iris`} viewBox={vb} overflow="visible" set:html={ART[d].iris} />
             <symbol id={`eye-${d}-front`} viewBox={vb} overflow="visible" set:html={ART[d].front} />
           </>
         ))
       }
+      {IRISES.map((c) => <symbol id={`iris-${c}`} viewBox={vb} overflow="visible" set:html={IRIS_ART[c]} />)}
       <symbol id="eye-shade" viewBox={vb} overflow="visible" set:html={SHADE} />
     </defs>
   </svg>
@@ -58,15 +70,18 @@ const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
     layouts.map((L) => (
       <div class:list={['eyes', `eyes--${L.key}`]} style={`aspect-ratio:${L.aspect}`}>
         {L.eyes.map((e) => (
-          <svg class="eye" viewBox={vb} style={e.style} data-eye={e.design}>
+          <svg class="eye" viewBox={vb} style={e.style} data-eye={e.design} data-iris={e.iris}>
             <use href={`#eye-${e.design}-behind`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
             <path d={OPENING_PATH} fill={INK.white} />
             <g clip-path="url(#eye-opening)">
               <g class="look">
-                <use href={`#eye-${e.design}-iris`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
+                <use href={`#iris-${e.iris}`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
               </g>
               <use href="#eye-shade" x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
-              <rect class="lid" x={EX - 80} y={EY - 50} width="160" height="100" />
+              <g class="lid">
+                <path d={LID_PATH} style={`fill:${LID_FILL[e.design]}`} />
+                <path d={LID_EDGE} fill="none" stroke={INK.ink} stroke-width="3" stroke-linejoin="round" />
+              </g>
             </g>
             <use href={`#eye-${e.design}-front`} x={VB.x} y={VB.y} width={VB.w} height={VB.h} />
           </svg>
@@ -143,24 +158,11 @@ const vb = `${VB.x} ${VB.y} ${VB.w} ${VB.h}`;
   .look {
     will-change: transform;
   }
-  /* Blink: an eyelid the color of the band drops from the top and lifts again */
+  /*
+    The eyelid rests just above the opening (out of sight, the clip hides it). src/scripts/eyes.ts
+    slides it down with translate for blinks and drooping; keep this in sync with LID_REST.
+  */
   .lid {
-    fill: var(--eyes-bg);
-    transform-box: fill-box;
-    transform-origin: 50% 0;
-    transform: scaleY(0);
-  }
-  .eye.blink .lid {
-    animation: blink 180ms ease-in-out;
-  }
-  @keyframes blink {
-    50% {
-      transform: scaleY(1);
-    }
-  }
-  @media (prefers-reduced-motion: reduce) {
-    .eye.blink .lid {
-      animation: none;
-    }
+    transform: translate(0, -5px);
   }
 </style>

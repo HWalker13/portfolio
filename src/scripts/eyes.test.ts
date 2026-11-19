@@ -1,14 +1,61 @@
 import { describe, expect, it } from 'vitest';
-import { ART, DESIGNS, IRIS_C, IRIS_R, MAX_ROT, OPENING, PATTERNS, PITCH, SIZE_JITTER, VB, whitesOverlap } from './eye-art';
-import { TRAVEL_X, TRAVEL_Y, pupilOffset, toEyeFrame } from './eyes';
+import {
+  ART,
+  DESIGNS,
+  IRISES,
+  IRIS_ART,
+  IRIS_C,
+  IRIS_R,
+  MAX_ROT,
+  OPENING,
+  PATTERNS,
+  PITCH,
+  SIZE_JITTER,
+  VB,
+  irisTuck,
+  irisVisible,
+  pupilClearance,
+  whitesOverlap,
+} from './eye-art';
+import {
+  BLINK_MS,
+  DROOP,
+  DROOP_MS,
+  REACH,
+  SLEEP_AFTER,
+  WAKE_MS,
+  aim,
+  blinkClosure,
+  blinkDelay,
+  irisOffset,
+  pickBlinkEye,
+  stepLid,
+  toEyeFrame,
+  wakeStep,
+  type Wake,
+} from './eyes';
 
 describe('eye designs', () => {
-  it('has exactly the five designs, each fully drawn', () => {
-    expect(DESIGNS).toEqual(['cobalt', 'sage', 'yellow', 'petals', 'spikes']);
-    for (const d of DESIGNS) {
-      expect(ART[d].iris).toContain('<circle');
-      expect(ART[d].front.length).toBeGreaterThan(0);
+  it('has exactly the six designs, each fully drawn', () => {
+    expect(DESIGNS).toEqual(['cobalt', 'sage', 'yellow', 'waves', 'petals', 'spikes']);
+    for (const d of DESIGNS) expect(ART[d].front.length).toBeGreaterThan(0);
+  });
+  it('gives the wave lid cobalt crests, a lighter inner wave line and an inked curl per crest', () => {
+    expect(ART.waves.behind).toContain('fill="#1F4FA8"');
+    expect(ART.waves.behind).toContain('stroke="#7FA3DE"');
+    expect((ART.waves.behind.match(/fill="#16110D"/g) ?? []).length).toBeGreaterThanOrEqual(3);
+  });
+  it('draws six iris colors, each with hatching, a limbal ring, a pupil and a catchlight', () => {
+    expect(IRISES).toEqual(['blue', 'brown', 'green', 'hazel', 'greyBlue', 'amber']);
+    for (const c of IRISES) {
+      const a = IRIS_ART[c];
+      expect(a).toContain('stroke-width="0.7"'); // radial pen hatching
+      expect(a).toContain('stroke-width="2.8"'); // limbal ring
+      expect(a).toMatch(/r="13\.5" fill="#16110D"/); // pupil
+      expect(a).toContain('<ellipse'); // catchlight
     }
+    // Hazel: gold-brown at the pupil fading out to green
+    expect(IRIS_ART.hazel).toContain('radialGradient');
   });
   it('draws the iris at about half the opening width, under the upper lid, meeting the lower lid', () => {
     const xs = OPENING.map((p) => p[0]);
@@ -60,8 +107,19 @@ describe('half-drop repeat', () => {
           if (touching) expect(a.design === b.design, `${a.col},${a.row} vs ${b.col},${b.row}`).toBe(false);
         }
     });
-    it(`${L.key}: uses all five designs`, () => {
+    it(`${L.key}: uses all six designs, the wave variant included`, () => {
       expect(new Set(placed.map((e) => e.design))).toEqual(new Set(DESIGNS));
+    });
+    it(`${L.key}: never gives two touching eyes the same iris color`, () => {
+      for (const a of placed)
+        for (const b of placed) {
+          if (a === b) continue;
+          const touching = Math.abs(a.col - b.col) <= 1 && Math.abs(a.cy - b.cy) < py * 1.01 && !(a.col === b.col && Math.abs(a.row - b.row) > 1);
+          if (touching) expect(a.iris === b.iris, `${a.col},${a.row} vs ${b.col},${b.row}`).toBe(false);
+        }
+    });
+    it(`${L.key}: shows several iris colors on every design`, () => {
+      for (const d of DESIGNS) expect(new Set(placed.filter((e) => e.design === d).map((e) => e.iris)).size, d).toBeGreaterThanOrEqual(2);
     });
     it(`${L.key}: fills the strip with no empty rows or columns, bleeding off all four edges`, () => {
       const half = (e: (typeof placed)[number]) => e.w / 2;
@@ -90,21 +148,109 @@ describe('half-drop repeat', () => {
   }
 });
 
-describe('pupilOffset', () => {
+describe('side-eye travel', () => {
+  const far = (deg: number) => irisOffset(...aim(Math.cos((deg * Math.PI) / 180) * 5000, Math.sin((deg * Math.PI) / 180) * 5000));
+  const atRest = irisVisible(0, 0);
+
   it('looks straight ahead when the pointer is on the eye', () => {
-    expect(pupilOffset(0, 0)).toEqual([0, 0]);
+    expect(irisOffset(...aim(0, 0))).toEqual([0, 0]);
   });
-  it('never leaves its travel ellipse, however far the pointer is', () => {
-    const [x, y] = pupilOffset(5000, 5000);
-    expect((x / TRAVEL_X) ** 2 + (y / TRAVEL_Y) ** 2).toBeLessThanOrEqual(1.0001);
+  it('keeps the pupil and both catchlights fully visible, clear of the lids, in every direction', () => {
+    expect(pupilClearance(0, 0)).toBeGreaterThan(1);
+    for (let deg = 0; deg < 360; deg += 3) expect(pupilClearance(...far(deg)), `${deg}°`).toBeGreaterThan(1);
   });
-  it('keeps the big iris inside the opening at full travel', () => {
-    const xs = OPENING.map((p) => p[0]);
-    expect(IRIS_C[0] - IRIS_R - TRAVEL_X).toBeGreaterThan(Math.min(...xs));
-    expect(IRIS_C[0] + IRIS_R + TRAVEL_X).toBeLessThan(Math.max(...xs));
+  it('keeps at least two thirds of the iris that shows at rest visible, in every direction', () => {
+    // The upper lid already covers the iris's top at rest (~23%); full side-eye keeps ≥ 68% of the rest
+    expect(atRest).toBeGreaterThan(0.74);
+    for (let deg = 0; deg < 360; deg += 3) expect(irisVisible(...far(deg)) / atRest, `${deg}°`).toBeGreaterThanOrEqual(0.66);
   });
-  it('tracks less when the pointer is close', () => {
-    expect(Math.abs(pupilOffset(50, 0)[0])).toBeLessThan(Math.abs(pupilOffset(500, 0)[0]));
+  it('presses the iris into each corner at full horizontal deflection', () => {
+    for (const deg of [0, 180]) {
+      const [x] = far(deg);
+      expect(Math.abs(x)).toBeGreaterThanOrEqual(38); // more than 3× the old ±12
+      const tuck = irisTuck(...far(deg));
+      expect(tuck, `${deg}°`).toBeGreaterThan(0.12);
+      expect(tuck, `${deg}°`).toBeLessThan(0.17);
+    }
+  });
+  it('travels wide sideways and only a little up or down', () => {
+    expect(Math.abs(far(0)[0])).toBeGreaterThan(5 * Math.abs(far(90)[1]));
+    expect(Math.abs(far(270)[1])).toBeLessThan(1); // the upper lid keeps the top of the iris
+    expect(far(90)[1]).toBeLessThanOrEqual(5);
+  });
+  it('still strains hard sideways on a diagonal', () => {
+    expect(Math.abs(far(225)[0])).toBeGreaterThan(30);
+  });
+  it('reaches full deflection by REACH px, easing in on the way', () => {
+    expect(REACH).toBeGreaterThanOrEqual(150);
+    expect(REACH).toBeLessThanOrEqual(200);
+    const x = (d: number) => Math.abs(irisOffset(...aim(d, 0))[0]);
+    expect(x(REACH)).toBeCloseTo(x(5000));
+    expect(x(REACH / 4)).toBeLessThan(x(REACH / 2));
+    expect(x(REACH / 2)).toBeLessThan(x(REACH));
+    expect(x(10)).toBeLessThan(5); // no snap near the eye
+  });
+});
+
+describe('blinks', () => {
+  it('waits 2–5 s between blinks', () => {
+    expect(blinkDelay(0)).toBe(2000);
+    expect(blinkDelay(0.9999)).toBeLessThanOrEqual(5000);
+  });
+  it('never picks the same eye twice in a row', () => {
+    let last = -1;
+    for (let i = 0; i < 2000; i++) {
+      const next = pickBlinkEye(7, last, Math.random());
+      expect(next).not.toBe(last);
+      expect(next).toBeGreaterThanOrEqual(0);
+      expect(next).toBeLessThan(7);
+      last = next;
+    }
+    // Every eye can be picked
+    const picks = new Set(Array.from({ length: 6 }, (_, k) => pickBlinkEye(7, 3, (k + 0.5) / 6)));
+    expect(picks.size).toBe(6);
+    expect(picks.has(3)).toBe(false);
+  });
+  it('closes and reopens in about 150ms', () => {
+    expect(BLINK_MS).toBe(150);
+    expect(blinkClosure(0)).toBe(0);
+    expect(blinkClosure(BLINK_MS / 2)).toBeCloseTo(1);
+    expect(blinkClosure(BLINK_MS)).toBe(0);
+  });
+});
+
+describe('sleepy eyes', () => {
+  const idle = (state: Wake, idleMs: number) => wakeStep(state, { idleMs, left: false, moved: false });
+  it('stays awake while the pointer is recent, droops after about 10 s idle, wakes on a move', () => {
+    let s: Wake = 'awake';
+    s = idle(s, 9000);
+    expect(s).toBe('awake');
+    s = idle(s, SLEEP_AFTER);
+    expect(s).toBe('drooping');
+    s = idle(s, SLEEP_AFTER + 5000);
+    expect(s).toBe('drooping');
+    s = wakeStep(s, { idleMs: 0, left: false, moved: true });
+    expect(s).toBe('awake');
+  });
+  it('droops as soon as the pointer leaves the window', () => {
+    expect(wakeStep('awake', { idleMs: 100, left: true, moved: false })).toBe('drooping');
+  });
+  it('droops to half closed over ~1.5 s and opens quickly', () => {
+    let c = 0;
+    let t = 0;
+    while (c < DROOP) {
+      c = stepLid(c, DROOP, 16);
+      t += 16;
+    }
+    expect(c).toBe(DROOP);
+    expect(t).toBeGreaterThanOrEqual(DROOP_MS - 16);
+    expect(t).toBeLessThanOrEqual(DROOP_MS + 16);
+    let back = 0;
+    while (c > 0) {
+      c = stepLid(c, 0, 16);
+      back += 16;
+    }
+    expect(back).toBeLessThanOrEqual(WAKE_MS);
   });
 });
 

@@ -7,13 +7,17 @@
   lower lid and crease, then hatching. Irises with fine radiating pen hatching, a dark limbal ring,
   a big pupil and a white catchlight; the upper lid covers the top of the iris.
 
-  Five designs, cycled across a half-drop repeat:
+  Six designs, cycled across a half-drop repeat:
     cobalt ... cobalt-blue lid, the liner's flick extended into a wing
     sage ..... sage-green lid shadow
     yellow ... yellow lid shadow swept up toward the brow
+    waves .... the cobalt lid again, its upper edge a row of curling ocean-wave crests
     petals ... the eye framed by a yellow flower-shaped petal shadow
     spikes ... 1960s painted-on lashes: filled black wedges radiating above and below,
                with a heavy liner around the whole eye
+
+  Irises are independent of the makeup: six colors (blue, brown, green, hazel, grey-blue, amber),
+  each drawn once, assigned per eye from the seed so no two neighbors share one.
 
   The iris (with its hatching, pupil and catchlight) is its own layer, `.look`, clipped to the eye
   opening, so when src/scripts/eyes.ts slides it toward the cursor it moves under the lids.
@@ -69,6 +73,10 @@ export const OPENING_PATH = pathOf(OPENING);
 */
 export const IRIS_R = 33;
 export const IRIS_C: Pt = [80, 53];
+/** Pupil and catchlights, relative to the iris center. src/scripts/eyes.ts keeps them fully visible. */
+export const PUPIL_R = 13.5;
+export const CATCHLIGHT = { dx: 9, dy: -3, rx: 5.6, ry: 4.6 } as const;
+export const SPARK = { dx: -9, dy: 10, r: 1.9 } as const;
 
 // ── Inks ───────────────────────────────────────────────────────────────
 export const INK = {
@@ -79,9 +87,22 @@ export const INK = {
   sage: '#9DB48A',
   sageDeep: '#83A06F',
   yellow: '#F2C230',
-  blueIris: '#3E73C2',
-  brownIris: '#7A4A26',
+  /** The wave lid's thin inner wave line */
+  waveLight: '#7FA3DE',
 } as const;
+
+/** Iris colors (decorative, inside the white). Hazel is a gradient: gold-brown at the pupil, green outside. */
+export const IRISES = ['blue', 'brown', 'green', 'hazel', 'greyBlue', 'amber'] as const;
+export type IrisColor = (typeof IRISES)[number];
+export const IRIS_INK: Record<IrisColor, string> = {
+  blue: '#3E73C2',
+  brown: '#7A4A26',
+  green: '#4F8A47',
+  hazel: '#6F8E3E',
+  greyBlue: '#7D97AB',
+  amber: '#C8891F',
+};
+const HAZEL_RING = '#A66F2A';
 const K = INK.ink;
 
 /** Deterministic PRNG (mulberry32) */
@@ -261,9 +282,21 @@ function cornerShade() {
 const lidShade = `<path d="${stroke(top, () => 12, 0.02, 0.98)}" fill="${K}" fill-opacity="0.12" transform="translate(0 5)"/>`;
 export const SHADE = lidShade + cornerShade();
 
+/**
+  The moving eyelid (blinks and sleepy drooping, src/scripts/eyes.ts): the area above the upper
+  lid line, filled with the design's lid color, with an ink lash line along its lower edge. At
+  rest it sits LID_REST units up, fully outside the opening; sliding it down LID_TRAVEL closes it.
+*/
+const lidEdge = Array.from({ length: 25 }, (_, i) => top(i / 24));
+export const LID_PATH = pathOf([[INNER[0] - 30, INNER[1]], ...lidEdge, [OUTER[0] + 30, OUTER[1]], [OUTER[0] + 30, -60], [INNER[0] - 30, -60]]);
+export const LID_EDGE = `M${(INNER[0] - 30).toFixed(1)} ${INNER[1]} L${lidEdge.map((p) => p.map(f).join(' ')).join(' L')} L${(OUTER[0] + 30).toFixed(1)} ${OUTER[1]}`;
+export const LID_REST = -5;
+/** From rest to fully closed: the lid line's highest point reaches the lower lid. */
+export const LID_TRAVEL = 60;
+
 /** The iris layer: base, depth, radiating pen hatching, limbal ring, pupil, catchlight. */
-function iris(color: string, seed: number) {
-  const r = rng(seed);
+function iris(color: IrisColor) {
+  const r = rng(IRISES.indexOf(color) * 131 + 7);
   const [cx, cy] = IRIS_C;
   const R = IRIS_R;
   let lines = '';
@@ -273,25 +306,90 @@ function iris(color: string, seed: number) {
     const r1 = R - 1.5 - r() * (i % 3 === 0 ? 2 : 9);
     lines += `M${f(cx + Math.cos(a) * r0)} ${f(cy + Math.sin(a) * r0)} L${f(cx + Math.cos(a) * r1)} ${f(cy + Math.sin(a) * r1)} `;
   }
+  // Hazel: a gold-brown ring around the pupil fading out to green. userSpaceOnUse, so the gradient
+  // moves with the iris layer when it's translated.
+  const hazel =
+    color === 'hazel'
+      ? `<radialGradient id="iris-hazel-grad" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="${R}">` +
+        `<stop offset="0.4" stop-color="${HAZEL_RING}"/><stop offset="0.58" stop-color="${HAZEL_RING}"/><stop offset="0.82" stop-color="${IRIS_INK.hazel}"/></radialGradient>`
+      : '';
+  const fill = color === 'hazel' ? 'url(#iris-hazel-grad)' : IRIS_INK[color];
   return (
-    `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${color}"/>` +
+    hazel +
+    `<circle cx="${cx}" cy="${cy}" r="${R}" fill="${fill}"/>` +
     `<circle cx="${cx}" cy="${cy}" r="21" fill="#FFFFFF" fill-opacity="0.15"/>` +
     `<path d="${lines}" stroke="${K}" stroke-width="0.7" stroke-opacity="0.6" stroke-linecap="round"/>` +
     `<circle cx="${cx}" cy="${cy}" r="${R - 1.4}" fill="none" stroke="${K}" stroke-width="2.8"/>` +
-    `<circle cx="${cx}" cy="${cy}" r="13.5" fill="${K}"/>` +
-    `<ellipse cx="${cx + 9}" cy="${cy - 3}" rx="5.6" ry="4.6" fill="${INK.white}"/>` +
-    `<circle cx="${cx - 9}" cy="${cy + 10}" r="1.9" fill="${INK.white}" fill-opacity="0.85"/>`
+    `<circle cx="${cx}" cy="${cy}" r="${PUPIL_R}" fill="${K}"/>` +
+    `<ellipse cx="${cx + CATCHLIGHT.dx}" cy="${cy + CATCHLIGHT.dy}" rx="${CATCHLIGHT.rx}" ry="${CATCHLIGHT.ry}" fill="${INK.white}"/>` +
+    `<circle cx="${cx + SPARK.dx}" cy="${cy + SPARK.dy}" r="${SPARK.r}" fill="${INK.white}" fill-opacity="0.85"/>`
   );
 }
+export const IRIS_ART: Record<IrisColor, string> = Object.fromEntries(IRISES.map((c) => [c, iris(c)])) as Record<IrisColor, string>;
 
-// ── The five designs ───────────────────────────────────────────────────
-export const DESIGNS = ['cobalt', 'sage', 'yellow', 'petals', 'spikes'] as const;
+/**
+  The wave lid: cobalt shadow whose upper edge is a row of scalloped crests, each curling forward
+  (toward the outer corner) into an inked hook, with a thin lighter-blue wave line inside the edge.
+*/
+function waveLid() {
+  const N = 4;
+  const A = 13; // crest height
+  const PEAK = 0.72; // each crest rises slowly over most of its period, then breaks forward
+  const base = (t: number) => (CREASE - 10) * (0.5 + 0.5 * Math.sin(Math.PI * t));
+  const taper = (t: number) => Math.sqrt(Math.sin(Math.PI * t));
+  const phase = (t: number) => {
+    const p = t * N;
+    return p - Math.floor(p);
+  };
+  const profile = (ph: number) =>
+    ph < PEAK ? Math.sin((Math.PI / 2) * (ph / PEAK)) ** 1.6 : Math.cos((Math.PI / 2) * ((ph - PEAK) / (1 - PEAK))) ** 0.6;
+  const edgeH = (t: number, inset = 0) => base(t) + Math.max(0, A * taper(t) * profile(phase(t)) - inset);
+  const at = (t: number, h: number): Pt => {
+    const p = top(t);
+    const n = upTop(t);
+    return [p[0] + n[0] * h, p[1] + n[1] * h];
+  };
+  const n = 320;
+  const edge = Array.from({ length: n + 1 }, (_, i) => at(i / n, edgeH(i / n)));
+  const lower = Array.from({ length: 31 }, (_, i) => top(i / 30));
+  let out = `<path d="${pathOf([...lower, ...[...edge].reverse()])}" fill="${INK.cobalt}"/>`;
+  const line = (pts: Pt[]) => `M${pts.map((q) => q.map(f).join(' ')).join(' L')}`;
+  // The thin lighter-blue inner wave, following each crest a little inside the edge
+  const inner = Array.from({ length: n + 1 }, (_, i) => at(i / n, edgeH(i / n, 4.5))).filter((_, i) => i > 8 && i < n - 8);
+  out += `<path d="${line(inner)}" fill="none" stroke="${INK.waveLight}" stroke-width="1.4" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // Inked outline along the crests
+  out += `<path d="${line(edge.filter((_, i) => i > 2 && i < n - 2))}" fill="none" stroke="${K}" stroke-width="1.9" stroke-linejoin="round" stroke-linecap="round"/>`;
+  // At each crest the tip curls over: a tapered pen spiral from the peak, forward, down and back in,
+  // with a lighter-blue eye inside the curl
+  for (let i = 0; i < N; i++) {
+    const tc = (i + PEAK) / N;
+    const sc = taper(tc);
+    if (sc < 0.6) continue;
+    const R0 = A * 0.62 * sc;
+    const c = at(tc, edgeH(tc) - R0);
+    const tg = top(Math.min(1, tc + 0.01));
+    const tb = top(Math.max(0, tc - 0.01));
+    const ul = Math.hypot(tg[0] - tb[0], tg[1] - tb[1]);
+    const u: Pt = [(tg[0] - tb[0]) / ul, (tg[1] - tb[1]) / ul];
+    const nu = upTop(tc);
+    const curl = (q: number): Pt => {
+      const th = q * Math.PI * 1.9;
+      const rho = R0 * (1 - 0.72 * q);
+      return [c[0] + u[0] * rho * Math.sin(th) + nu[0] * rho * Math.cos(th), c[1] + u[1] * rho * Math.sin(th) + nu[1] * rho * Math.cos(th)];
+    };
+    out += `<circle cx="${f(c[0])}" cy="${f(c[1])}" r="${f(R0 * 0.5)}" fill="${INK.waveLight}"/>`;
+    out += ink(stroke(curl, (q) => 4 * (1 - q) + 0.6, 0, 1, 26));
+  }
+  return out;
+}
+
+// ── The six designs ────────────────────────────────────────────────────
+export const DESIGNS = ['cobalt', 'sage', 'yellow', 'waves', 'petals', 'spikes'] as const;
 export type Design = (typeof DESIGNS)[number];
 
 export interface EyeArt {
   design: Design;
   behind: string; // under the white (eyeshadow, petals)
-  iris: string; // the moving layer
   front: string; // ink over everything
 }
 const LINER = 12.5; // the liner band's maximum thickness: the heaviest line on every eye
@@ -299,14 +397,18 @@ const LINER = 12.5; // the liner band's maximum thickness: the heaviest line on 
 function design(d: Design): EyeArt {
   const seed = DESIGNS.indexOf(d) * 97 + 11;
   const tearDuct = `<path d="M${INNER[0] + 1} ${INNER[1]} q5 -3 9 1" stroke="${K}" stroke-width="1.3" fill="none" stroke-linecap="round"/>`;
-  const standard = (flick: number) => crease(seed + 1) + lowerLid(seed + 2) + mascara(LINER, seed + 3) + linerBand(LINER, flick) + tearDuct;
+  const lids = (flick: number) => lowerLid(seed + 2) + mascara(LINER, seed + 3) + linerBand(LINER, flick) + tearDuct;
+  const standard = (flick: number) => crease(seed + 1) + lids(flick);
   switch (d) {
     case 'cobalt':
-      return { design: d, behind: lidShadow(INK.cobalt), iris: iris(INK.blueIris, seed), front: standard(30) };
+      return { design: d, behind: lidShadow(INK.cobalt), front: standard(30) };
     case 'sage':
-      return { design: d, behind: lidShadow(INK.sage) + lidShadow(INK.sageDeep, CREASE - 15), iris: iris(INK.brownIris, seed), front: standard(14) };
+      return { design: d, behind: lidShadow(INK.sage) + lidShadow(INK.sageDeep, CREASE - 15), front: standard(14) };
     case 'yellow':
-      return { design: d, behind: lidShadow(INK.yellow, CREASE - 3, 14), iris: iris(INK.blueIris, seed), front: standard(14) };
+      return { design: d, behind: lidShadow(INK.yellow, CREASE - 3, 14), front: standard(14) };
+    case 'waves':
+      // The wave crests are the shadow's edge, so this lid has no separate crease line
+      return { design: d, behind: waveLid(), front: lids(22) };
     case 'petals': {
       const r = rng(seed);
       let petals = `<ellipse cx="${EX}" cy="${EY}" rx="80" ry="46" fill="${INK.yellow}"/>`;
@@ -318,7 +420,7 @@ function design(d: Design): EyeArt {
         petals += `<ellipse cx="${f(px)}" cy="${f(py)}" rx="19" ry="${f(23 + r() * 2)}" transform="rotate(${f(rot)} ${f(px)} ${f(py)})" fill="${INK.yellow}" stroke="${K}" stroke-width="1.8"/>`;
       }
       petals += `<ellipse cx="${EX}" cy="${EY}" rx="76" ry="43" fill="${INK.yellow}"/>`;
-      return { design: d, behind: petals, iris: iris(INK.brownIris, seed), front: standard(14) };
+      return { design: d, behind: petals, front: standard(14) };
     }
     case 'spikes': {
       // 1960s painted-on lashes: filled wedges in a starburst, and a heavy liner around the whole eye
@@ -348,7 +450,7 @@ function design(d: Design): EyeArt {
         const n = downBot(t);
         return [p[0] + n[0] * 2.4, p[1] + n[1] * 2.4];
       }, swell(2, 6), 0, 1));
-      return { design: d, behind: '', iris: iris(INK.blueIris, seed), front: wedges + lowerBand + linerBand(LINER + 1, 16) + crease(seed + 1) + tearDuct };
+      return { design: d, behind: '', front: wedges + lowerBand + linerBand(LINER + 1, 16) + crease(seed + 1) + tearDuct };
     }
   }
 }
@@ -383,13 +485,43 @@ export interface Placed {
   col: number;
   row: number;
   design: Design;
+  iris: IrisColor;
   cx: number;
   cy: number;
   w: number;
   rot: number;
 }
-/** Design for a grid cell: (2·col + row) mod 5 keeps every touching neighbor different. */
-export const designAt = (col: number, row: number): Design => DESIGNS[(((2 * col + row) % 5) + 5) % 5];
+/** Design for a grid cell: (2·col + row) mod 6 keeps every touching neighbor different. */
+export const designAt = (col: number, row: number): Design => DESIGNS[(((2 * col + row) % 6) + 6) % 6];
+
+/**
+  Do two cells touch (sideways, up/down or diagonally)? Same column: adjacent rows. Neighboring
+  columns: within one row pitch vertically (the half-drop makes two cells on each side touch).
+*/
+export const touching = (a: { col: number; row: number }, b: { col: number; row: number }) => {
+  if (a.col === b.col) return Math.abs(a.row - b.row) === 1;
+  if (Math.abs(a.col - b.col) !== 1) return false;
+  const drop = (c: number) => (((c % 2) + 2) % 2) / 2;
+  return Math.abs(a.row + drop(a.col) - (b.row + drop(b.col))) < 1;
+};
+
+/** Iris weights per design: the cobalt designs lean blue, every design shows the whole range. */
+const irisWeights = (d: Design): number[] => IRISES.map((c) => (c === 'blue' && (d === 'cobalt' || d === 'waves') ? 3 : 1));
+
+/** Seeded iris colors, cell by cell, never repeating a touching neighbor's color. */
+function assignIrises(cells: { col: number; row: number; design: Design }[], seed: number): IrisColor[] {
+  const r = rng(seed);
+  const out: IrisColor[] = [];
+  cells.forEach((cell, i) => {
+    const taken = new Set(cells.slice(0, i).flatMap((o, j) => (touching(o, cell) ? [out[j]] : [])));
+    const w = irisWeights(cell.design).map((x, k) => (taken.has(IRISES[k]) ? 0 : x));
+    let pick = r() * w.reduce((a, b) => a + b, 0);
+    let k = 0;
+    while (pick >= w[k] || w[k] === 0) pick -= w[k++];
+    out.push(IRISES[k]);
+  });
+  return out;
+}
 
 export function grid(L: Layout, seed: number) {
   const r = rng(seed);
@@ -414,6 +546,7 @@ export function grid(L: Layout, seed: number) {
         col,
         row,
         design: designAt(col, row),
+        iris: 'blue',
         cx,
         cy,
         w: w * (1 + (r() * 2 - 1) * SIZE_JITTER),
@@ -421,6 +554,8 @@ export function grid(L: Layout, seed: number) {
       });
     }
   }
+  // A separate stream, so iris colors never shift the sizes and tilts drawn above
+  assignIrises(placed, seed + 1).forEach((c, i) => (placed[i].iris = c));
   return { placed, px, py, x0, y0, k };
 }
 
@@ -438,6 +573,62 @@ function inPoly(x: number, y: number, poly: Pt[]) {
   }
   return inside;
 }
+
+// ── Iris geometry (used by the tests to check src/scripts/eyes.ts's travel) ──
+/** Is a point inside the eye opening? */
+export const inOpening = (x: number, y: number) => inPoly(x, y, OPENING);
+const segDist = (p: Pt, a: Pt, b: Pt) => {
+  const dx = b[0] - a[0];
+  const dy = b[1] - a[1];
+  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+};
+/** Signed distance to the opening's edge: positive inside. */
+export const openingClearance = (x: number, y: number) => {
+  const d = Math.min(...OPENING.map((a, i) => segDist([x, y], a, OPENING[(i + 1) % OPENING.length])));
+  return inOpening(x, y) ? d : -d;
+};
+/** Fraction of the iris disc inside the opening, with the iris moved by (ox, oy). */
+export function irisVisible(ox: number, oy: number, step = 0.75) {
+  let n = 0;
+  let v = 0;
+  for (let x = -IRIS_R; x <= IRIS_R; x += step)
+    for (let y = -IRIS_R; y <= IRIS_R; y += step)
+      if (x * x + y * y <= IRIS_R * IRIS_R) {
+        n++;
+        if (inOpening(IRIS_C[0] + ox + x, IRIS_C[1] + oy + y)) v++;
+      }
+  return v / n;
+}
+/** Fraction of the iris's horizontal diameter (at its center height) hidden past the opening's edge. */
+export function irisTuck(ox: number, oy: number) {
+  let out = 0;
+  let n = 0;
+  for (let x = -IRIS_R; x <= IRIS_R; x += 0.25) {
+    n++;
+    if (!inOpening(IRIS_C[0] + ox + x, IRIS_C[1] + oy)) out++;
+  }
+  return out / n;
+}
+/** Smallest clearance from the pupil and both catchlights to the opening's edge (negative = clipped). */
+export function pupilClearance(ox: number, oy: number) {
+  const cx = IRIS_C[0] + ox;
+  const cy = IRIS_C[1] + oy;
+  let m = Infinity;
+  for (let a = 0; a < 360; a += 4) {
+    const t = (a * Math.PI) / 180;
+    const c = Math.cos(t);
+    const s = Math.sin(t);
+    for (const [x, y] of [
+      [cx + PUPIL_R * c, cy + PUPIL_R * s],
+      [cx + CATCHLIGHT.dx + CATCHLIGHT.rx * c, cy + CATCHLIGHT.dy + CATCHLIGHT.ry * s],
+      [cx + SPARK.dx + SPARK.r * c, cy + SPARK.dy + SPARK.r * s],
+    ] as Pt[])
+      m = Math.min(m, openingClearance(x, y));
+  }
+  return m;
+}
+
 const SAMPLES: Pt[] = [];
 for (let x = 14; x <= 146; x += 6) for (let y = 26; y <= 100; y += 4) if (inPoly(x, y, OPENING)) SAMPLES.push([x - EX, y - EY]);
 const toStrip = (p: Placed, u: number, v: number): Pt => {
